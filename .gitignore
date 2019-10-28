@@ -417,6 +417,9 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 *.pyc
 
+# PyCharm
+.idea
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
