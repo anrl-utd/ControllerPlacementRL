@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 import controller_env
 
 env = gym.make('Controller-v0')
