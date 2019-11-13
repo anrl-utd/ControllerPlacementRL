@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 import numpy as np
 import warnings
 import random
+import itertools
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
@@ -21,13 +22,38 @@ class ControllerEnv(gym.Env):
 		"""Initializes the environment (Runs at first)"""
 		print("Initialized environment!")
 		self.original_graph = graph.copy()
-		self.clusters = clusters
+		self.clusters = np.stack(clusters)
 		self.graph = graph.copy()
 
 	def step(self, action):
 		"""Steps the environment once"""
 		print("Environment step")
-		self._set_controllers(action)
+		"""
+		How it works:
+		action is indices of controllers
+		Create a new complete graph with controllers only
+		 - Use shortest-distance between controllers as the weight of edges for controller graph
+		 - Store indices of nodes under each controller
+		Create several "packets" with source and destination
+		Find controller for source and destination
+		If source is same as destination controller, distance is 0
+		Otherwise, distance is the shortest-path distance between the source controller and destination
+		Add up all distances and have that as initial reward
+		"""
+		#Create metagraph of controllers. The node at an index corresponds to the controller of the cluster of that index
+		controller_graph = self._set_controllers(action)
+
+		#Create "packets" with source, destination
+		packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(100, 2))
+		#Convert source and destination to cluster the source/destination is in
+		distance = 0
+		for i in range(packets.shape[0]):
+			if packets[i, 0] == packets[i, 1]:
+				continue
+			source_cluster = np.where(self.clusters == packets[i, 0])[0][0]
+			destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
+			distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
+		return distance
 
 	def reset(self):
 		"""Resets the environment to initial state"""
@@ -54,10 +80,44 @@ class ControllerEnv(gym.Env):
 		plt.show()
 
 	def _set_controllers(self, controllers):
-		for cluster_num in range(len(self.clusters)):
-			for neighbors in nx.all_neighbors(self.graph, controllers[cluster_num]):
-				# TODO: Separate controllers from all nodes not in their cluster, then link all nodes in its cluster directly to it
-				print(controllers[cluster_num], neighbors)
+		"""Creates metagraph of controllers
+		Args:
+			controllers: Array of controller indices
+		
+		Returns:
+			Complete graph of controllers (metagraph)
+			
+		Raises:
+			AssertError: Issue with controller indices (not 1 per cluster)"""
+		#Ensure that these are valid controllers - all clusters have a controller
+		assert(len(controllers) == self.clusters.shape[0])
+		found_clusters = np.zeros((len(controllers)))	#Stores what clusters have controllers been found for
+		clusters = nx.get_node_attributes(self.graph, 'cluster')
+		index = 0
+		for controller in controllers:
+			#Multiple controllers in a cluster
+			assert(found_clusters[clusters[controller]] == 0)
+			found_clusters[clusters[controller]] = 1
+		
+		#Controllers were found to be valid. Now add controllers to complete metagraph.
+		new_contr_indices = []
+		for i in range(len(controllers)):
+			new_contr_indices.append([i, controllers[i]])
+		controller_graph = nx.complete_graph(len(new_contr_indices))	#Store controller metagraph
+		for pair in itertools.combinations(new_contr_indices, 2):
+			controller_graph.add_edge(pair[0][0], pair[1][0], weight=nx.dijkstra_path_length(self.graph, source=pair[0][1], target=pair[1][1]))
+
+		#Display metagraph for debugging. Should be removed once we get _set_controllers() working
+		pos = nx.spring_layout(controller_graph)
+		nx.draw_networkx_nodes(controller_graph, pos)
+		nx.draw_networkx_edges(controller_graph, pos, controller_graph.edges())        # draw the edges of the controller_graph
+		nx.draw_networkx_labels(controller_graph, pos)                      # draw  the labels of the controller_graph
+		edge_labels = nx.get_edge_attributes(controller_graph,'weight')
+		nx.draw_networkx_edge_labels(controller_graph,pos,edge_labels=edge_labels) # draw the edge weights of the controller_graph
+		plt.draw()
+		plt.show()
+
+		return controller_graph
 
 def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=100, draw=True):
 	"""Generates graph given number of clusters and nodes
@@ -88,9 +148,6 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 				node_colors[node] = index
 	# Set node cluster numbers and draw them
 	nx.set_node_attributes(graph, cluster_attrib, 'cluster')
-	print(nx.get_node_attributes(graph, 'cluster'))
-	for node in nx.get_node_attributes(graph, 'cluster'):
-		print(node)
 	nx.draw_networkx_nodes(graph, pos, node_color=node_colors)
 
 	# Keeping Vincent's code in case we decide to have a legend for the cluster lables [Usaid]
