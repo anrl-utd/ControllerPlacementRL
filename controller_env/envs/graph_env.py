@@ -12,15 +12,20 @@ import warnings
 import random
 import itertools
 import pprint
+from collections import defaultdict
 warnings.filterwarnings("ignore", category=UserWarning)
 
 class ControllerEnv(gym.Env):
-	"""Environment used to simulate the network for the RL"""
+	"""Base environment used to simulate the network for the RL"""
 	metadata = {'render.modes' : ['human']}
-	def __init__(self, graph, clusters):
+	def __init__(self, graph, clusters, pos=None):
 		"""Initializes the environment (Runs at first)"""
 		print("Initialized environment!")
 		self.original_graph = graph.copy()
+		if(pos is None):
+			self.pos = nx.spring_layout(graph)   # get the positions of the nodes of the graph
+		else:
+			self.pos = pos
 		self.clusters = np.stack(clusters)
 		self.graph = graph.copy()
 
@@ -65,16 +70,15 @@ class ControllerEnv(gym.Env):
 
 		#Redraw the entire graph (this can only be expedited if we save the position and colors beforehand)
 		#Then we won't have to recalculate all this to draw. Maybe make them a global variable?
-		pos = nx.spring_layout(self.graph)
 		node_colors = np.arange(0, nx.number_of_nodes(self.graph), 1)
 		clustering = nx.get_node_attributes(self.graph, 'cluster')
 		for node in clustering:
 			node_colors[node] = clustering[node]
-		nx.draw_networkx_nodes(self.graph, pos, node_color=node_colors)
-		nx.draw_networkx_edges(self.graph, pos, self.graph.edges())        # draw the edges of the self.graph
-		nx.draw_networkx_labels(self.graph, pos)                      # draw  the labels of the self.graph
+		nx.draw_networkx_nodes(self.graph, self.pos, node_color=node_colors)
+		nx.draw_networkx_edges(self.graph, self.pos, self.graph.edges())        # draw the edges of the self.graph
+		nx.draw_networkx_labels(self.graph, self.pos)                      # draw  the labels of the self.graph
 		edge_labels = nx.get_edge_attributes(self.graph,'weight')
-		nx.draw_networkx_edge_labels(self.graph,pos,edge_labels=edge_labels) # draw the edge weights of the self.graph
+		nx.draw_networkx_edge_labels(self.graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the self.graph
 		plt.draw()
 		plt.show()
 
@@ -99,36 +103,28 @@ class ControllerEnv(gym.Env):
 			found_clusters[clusters[controller]] = 1
 		
 		#Controllers were found to be valid. Now add controllers to complete metagraph.
+		#TODO: Optimize this, new_contr_indices and mapping can be reduced to a single variable (and possible a single line for the for)
 		new_contr_indices = []
+		mapping = defaultdict(list)
 		for i in range(len(controllers)):
 			new_contr_indices.append([i, controllers[i]])
+			mapping[i] = controllers[i]
 		controller_graph = nx.complete_graph(len(new_contr_indices))	#Store controller metagraph
+		
 		for pair in itertools.combinations(new_contr_indices, 2):
 			controller_graph.add_edge(pair[0][0], pair[1][0], weight=nx.dijkstra_path_length(self.graph, source=pair[0][1], target=pair[1][1]))
 
 		#Display metagraph for debugging. Should be removed once we get _set_controllers() working
-		pos = nx.spring_layout(controller_graph)
-		nx.draw_networkx_nodes(controller_graph, pos)
-		nx.draw_networkx_edges(controller_graph, pos, controller_graph.edges())        # draw the edges of the controller_graph
-		nx.draw_networkx_labels(controller_graph, pos)                      # draw  the labels of the controller_graph
-		edge_labels = nx.get_edge_attributes(controller_graph,'weight')
-		nx.draw_networkx_edge_labels(controller_graph,pos,edge_labels=edge_labels) # draw the edge weights of the controller_graph
+		display_graph = nx.relabel_nodes(controller_graph, mapping)
+		nx.draw_networkx_nodes(display_graph,self. pos)
+		nx.draw_networkx_edges(display_graph, self.pos, display_graph.edges())        # draw the edges of the display_graph
+		nx.draw_networkx_labels(display_graph, self.pos)                      # draw  the labels of the display_graph
+		edge_labels = nx.get_edge_attributes(display_graph,'weight')
+		nx.draw_networkx_edge_labels(display_graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the display_graph
 		plt.draw()
 		plt.show()
 
 		return controller_graph
-
-class ControllerRandomStart(ControllerEnv):
-	def __init__(self, graph, clusters):
-		super().__init__(graph, clusters)
-		self.controllers = [np.random.choice(i) for i in self.clusters]
-
-	def step(self, action):
-		for controller_index in range(len(action)):
-			if(action[controller_index] is 1):
-				neighbors = self.graph.neighbors(self.controllers[controller_index])
-				self.controllers[controller_index] = np.random.choice(list(neighbors))
-		return super().step(self.controllers)
 
 def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=100, draw=True):
 	"""Generates graph given number of clusters and nodes
@@ -147,7 +143,7 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 
 	traversal = list(nx.bfs_tree(graph, source = 0))    # get a bft of the graph in a list
 	array_traversal = np.array_split(traversal, num_clusters)      # split the bft list into equal parts
-	pos = nx.spring_layout(graph)   # get the positions of the nodes of the graph
+	
 
 	cluster_attrib = dict() # Dictionary that stores cluster number for each node
 	node_colors = np.arange(0, num_nodes, 1, np.uint8)
@@ -158,6 +154,7 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 				cluster_attrib[node] = index
 				node_colors[node] = index
 	# Set node cluster numbers and draw them
+	pos = nx.spring_layout(graph)
 	nx.set_node_attributes(graph, cluster_attrib, 'cluster')
 	nx.draw_networkx_nodes(graph, pos, node_color=node_colors)
 
@@ -184,4 +181,4 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 		plt.draw()
 		plt.legend()
 		plt.show()
-	return graph, array_traversal
+	return graph, array_traversal, pos
