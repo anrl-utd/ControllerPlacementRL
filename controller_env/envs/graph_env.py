@@ -11,13 +11,12 @@ import numpy as np
 import warnings
 import random
 import itertools
+import pprint
 warnings.filterwarnings("ignore", category=UserWarning)
-
 
 class ControllerEnv(gym.Env):
 	"""Environment used to simulate the network for the RL"""
 	metadata = {'render.modes' : ['human']}
-
 	def __init__(self, graph, clusters):
 		"""Initializes the environment (Runs at first)"""
 		print("Initialized environment!")
@@ -118,6 +117,18 @@ class ControllerEnv(gym.Env):
 		plt.show()
 
 		return controller_graph
+
+class ControllerRandomStart(ControllerEnv):
+	def __init__(self, graph, clusters):
+		super().__init__(graph, clusters)
+		self.controllers = [np.random.choice(i) for i in self.clusters]
+
+	def step(self, action):
+		for controller_index in range(len(action)):
+			if(action[controller_index] is 1):
+				neighbors = self.graph.neighbors(self.controllers[controller_index])
+				self.controllers[controller_index] = np.random.choice(list(neighbors))
+		return super().step(self.controllers)
 
 def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=100, draw=True):
 	"""Generates graph given number of clusters and nodes
