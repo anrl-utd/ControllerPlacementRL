@@ -116,7 +116,7 @@ class ControllerEnv(gym.Env):
 
 		#Display metagraph for debugging. Should be removed once we get _set_controllers() working
 		display_graph = nx.relabel_nodes(controller_graph, mapping)
-		nx.draw_networkx_nodes(display_graph,self. pos)
+		# nx.draw_networkx_nodes(display_graph,self. pos)
 		nx.draw_networkx_edges(display_graph, self.pos, display_graph.edges())        # draw the edges of the display_graph
 		nx.draw_networkx_labels(display_graph, self.pos)                      # draw  the labels of the display_graph
 		edge_labels = nx.get_edge_attributes(display_graph,'weight')
@@ -125,6 +125,23 @@ class ControllerEnv(gym.Env):
 		plt.show()
 
 		return controller_graph
+
+	def stepLA(self, graph, controllers):
+		"""
+		Helper function used to calculate distance between chosen controllers
+		:param controllers: The list of chosen controllers in which to calculate distance between
+		:return: The total distance from every controller to the other controllers
+		"""
+		distance = 0
+		for current_controller in range(len(controllers)):
+			for other_controller in range(current_controller, len(controllers)):
+				distance += nx.dijkstra_path_length(graph, controllers[current_controller],
+												   controllers[other_controller])
+		return distance
+
+
+
+
 
 def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=100, draw=True):
 	"""Generates graph given number of clusters and nodes
@@ -139,7 +156,7 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 	Returns:
 		Graph with nodes in clusters, array of clusters
 	"""
-	graph = nx.powerlaw_cluster_graph(num_nodes,3, prob, random.seed(a = None, version = 2))
+	graph = nx.powerlaw_cluster_graph(num_nodes,3, prob, random.seed(2))  #originally a = None, version = 2 for random seed
 
 	traversal = list(nx.bfs_tree(graph, source = 0))    # get a bft of the graph in a list
 	array_traversal = np.array_split(traversal, num_clusters)      # split the bft list into equal parts
@@ -147,15 +164,20 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 
 	cluster_attrib = dict() # Dictionary that stores cluster number for each node
 	node_colors = np.arange(0, num_nodes, 1, np.uint8)
+	learning_automaton = dict();
+
 	# Assign cluster attribute for each node
 	for node in graph.nodes:
 		for index, the_traversal in enumerate(array_traversal): # Get clusters and find cluster node is in
 			if node in the_traversal:
 				cluster_attrib[node] = index
 				node_colors[node] = index
+				learning_automaton[node] = 0.5 # the probability of becoming a controller
+
 	# Set node cluster numbers and draw them
 	pos = nx.spring_layout(graph)
 	nx.set_node_attributes(graph, cluster_attrib, 'cluster')
+	nx.set_node_attributes(graph, learning_automaton, 'learning_automaton')
 	nx.draw_networkx_nodes(graph, pos, node_color=node_colors)
 
 	# Keeping Vincent's code in case we decide to have a legend for the cluster lables [Usaid]
@@ -182,3 +204,4 @@ def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=1
 		plt.legend()
 		plt.show()
 	return graph, array_traversal, pos
+
