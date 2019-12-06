@@ -33,7 +33,6 @@ class ControllerEnv(gym.Env):
 
 	def step(self, action):
 		"""Steps the environment once"""
-		print("Environment step")
 		"""
 		How it works:
 		action is indices of controllers
@@ -71,7 +70,6 @@ class ControllerEnv(gym.Env):
 
 	def render(self, mode='human', close=False):
 		"""Renders the environment once"""
-		print("Rendered enviroment")
 		plt.clf()	# Clear the matplotlib figure
 
 		#Redraw the entire graph (this can only be expedited if we save the position and colors beforehand)
@@ -120,15 +118,15 @@ class ControllerEnv(gym.Env):
 		for pair in itertools.combinations(new_contr_indices, 2):
 			controller_graph.add_edge(pair[0][0], pair[1][0], weight=nx.dijkstra_path_length(self.graph, source=pair[0][1], target=pair[1][1]))
 
-		#Display metagraph for debugging. Should be removed once we get _set_controllers() working
-		display_graph = nx.relabel_nodes(controller_graph, mapping)
-		# nx.draw_networkx_nodes(display_graph,self. pos)
-		nx.draw_networkx_edges(display_graph, self.pos, display_graph.edges())        # draw the edges of the display_graph
-		nx.draw_networkx_labels(display_graph, self.pos)                      # draw  the labels of the display_graph
-		edge_labels = nx.get_edge_attributes(display_graph,'weight')
-		nx.draw_networkx_edge_labels(display_graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the display_graph
-		plt.draw()
-		plt.show()
+		##Display metagraph for debugging. Should be removed once we get _set_controllers() working
+		#display_graph = nx.relabel_nodes(controller_graph, mapping)
+		## nx.draw_networkx_nodes(display_graph,self. pos)
+		#nx.draw_networkx_edges(display_graph, self.pos, display_graph.edges())        # draw the edges of the display_graph
+		#nx.draw_networkx_labels(display_graph, self.pos)                      # draw  the labels of the display_graph
+		#edge_labels = nx.get_edge_attributes(display_graph,'weight')
+		#nx.draw_networkx_edge_labels(display_graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the display_graph
+		#plt.draw()
+		#plt.show()
 
 		return controller_graph
 
@@ -145,7 +143,16 @@ class ControllerEnv(gym.Env):
 												   controllers[other_controller])
 		return distance
 
-
+	def calculateOptimal(self):
+		combinations = list(itertools.product(*self.clusters))
+		min_dist = 1000000
+		min_combination = None
+		for combination in combinations:
+			dist = self.step(combination)
+			if(dist < min_dist):
+				min_dist = dist
+				min_combination = combination
+		return (min_combination, min_dist)
 
 
 

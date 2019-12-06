@@ -9,14 +9,27 @@ import random
 import matplotlib.pyplot as plt
 import math
 
-graph, clusters, pos = generateGraph(5, 100, draw=True)	#Generate graph
-##Nudging environment
-loops = 0
-env = gym.make('Controller-RandomPlacement-v0', graph=graph, clusters=clusters, pos=pos)
-while loops < 100:
-	(obs, reward) = env.step([np.random.randint(0, 2) for i in clusters])	#This throws errors every so often since it selects neighbors without distinction whether the neighbor is in the cluster or not
-	print("REWARD: ", reward)
-	loops += 1
+from stable_baselines import PPO1
+
+if __name__ == "__main__":
+	graph, clusters, pos = generateGraph(3, 45, draw=False)	#Generate graph
+	#Nudging environment
+	env = gym.make('Controller-RandomPlacement-v0', graph=graph, clusters=clusters, pos=pos)
+	#Agent
+	model = PPO1('MlpPolicy', env, tensorboard_log='train_log', verbose=1)
+	# Train the agent
+	model.learn(total_timesteps=int(2e5))
+
+	loops = 0
+	obs = env.reset()
+	while loops < 100:
+		action, states = model.predict(obs)
+		(obs, reward, _, _) = env.step(action)
+		print("REWARD: ", reward)
+		loops += 1
+	(best_controllers, best_dist) = env.calculateOptimal()
+	print("Optimal:", best_controllers)
+	print("Optimal Distance:", best_dist)
 
 
 ##Base environment

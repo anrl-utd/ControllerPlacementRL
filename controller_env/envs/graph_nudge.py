@@ -1,5 +1,6 @@
 import numpy as np
 from gym import spaces
+import itertools
 from controller_env.envs.graph_env import ControllerEnv
 class ControllerRandomStart(ControllerEnv):
 	"""
@@ -16,6 +17,7 @@ class ControllerRandomStart(ControllerEnv):
 		self.action_space = spaces.Box(np.zeros(len(clusters)), np.ones(len(clusters)), dtype=np.uint8)
 		self.observation_space = spaces.Box(np.zeros(shape=len(graph.nodes)), np.ones(shape=len(graph.nodes)), dtype=np.bool)
 		self.controllers = [np.random.choice(i) for i in self.clusters]
+		self.original_controllers = self.controllers.copy()
 
 	def step(self, action):
 		"""
@@ -39,4 +41,21 @@ class ControllerRandomStart(ControllerEnv):
 		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
 		state = np.zeros(shape=len(self.graph.nodes))
 		state[self.controllers] = 1
-		return (state, super().step(self.controllers))
+		return (state, super().step(self.controllers), False, {})
+
+	def reset(self):
+		self.controllers = self.original_controllers.copy()
+		state = np.zeros(shape=len(self.graph.nodes))
+		state[self.controllers] = 1
+		return state
+
+	def calculateOptimal(self):
+		combinations = list(itertools.product(*self.clusters))
+		min_dist = 1000000
+		min_combination = None
+		for combination in combinations:
+			dist = self.stepLA(self.graph, combination)
+			if(dist < min_dist):
+				min_dist = dist
+				min_combination = combination
+		return (min_combination, min_dist)
