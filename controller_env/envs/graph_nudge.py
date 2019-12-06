@@ -1,4 +1,5 @@
 import numpy as np
+from gym import spaces
 from controller_env.envs.graph_env import ControllerEnv
 class ControllerRandomStart(ControllerEnv):
 	"""
@@ -12,6 +13,8 @@ class ControllerRandomStart(ControllerEnv):
 	def __init__(self, graph, clusters, pos=None):
 		"""Initilizes environment and assigns random nodes to be controllers"""
 		super().__init__(graph, clusters, pos)
+		self.action_space = spaces.Box(np.zeros(len(clusters)), np.ones(len(clusters)), dtype=np.uint8)
+		self.observation_space = spaces.Box(np.zeros(shape=len(graph.nodes)), np.ones(shape=len(graph.nodes)), dtype=np.bool)
 		self.controllers = [np.random.choice(i) for i in self.clusters]
 
 	def step(self, action):
@@ -22,11 +25,18 @@ class ControllerRandomStart(ControllerEnv):
 					List of size controllers
 					[[0, 0.5, 1, 0.5, 1], [1, 0, 0, 0, 0], ...] example for graph with degree 5
 		Returns:
-			Reward after selecting controllers and passing to base environment (latency for 1000 packets)
+			Tuple of (State, Reward) after selecting controllers and passing to base environment (latency for 1000 packets)
+			State is a boolean array of size <number of switches> which indicates whether a switch is a controller or not
 		"""
-		print(action)
 		for controller_index in range(len(action)):
 			if(action[controller_index] is 1):
 				neighbors = self.graph.neighbors(self.controllers[controller_index])
-				self.controllers[controller_index] = np.random.choice(list(neighbors))
-		return super().step(self.controllers)
+				neigh = list(neighbors)
+				choice = np.random.choice(neigh)
+				while(controller_index != self.graph.nodes[choice]['cluster']):
+					choice = np.random.choice(neigh)
+				self.controllers[controller_index] = choice
+		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
+		state = np.zeros(shape=len(self.graph.nodes))
+		state[self.controllers] = 1
+		return (state, super().step(self.controllers))
