@@ -18,13 +18,15 @@ if __name__ == "__main__":
 	#Agent
 	model = PPO1('MlpPolicy', env, tensorboard_log='train_log', verbose=1)
 	# Train the agent
-	model.learn(total_timesteps=int(2e5))
+	model.learn(total_timesteps=int(1e5))
 
 	loops = 0
 	obs = env.reset()
 	while loops < 100:
 		action, states = model.predict(obs)
 		(obs, reward, _, _) = env.step(action)
+		print("CONTROLLERS:", env.controllers)
+		print("OBSERVATION:", obs)
 		print("REWARD: ", reward)
 		loops += 1
 	(best_controllers, best_dist) = env.calculateOptimal()

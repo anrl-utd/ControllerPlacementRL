@@ -174,7 +174,7 @@ def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_lo
 	G = nx.Graph()
 	node_num = 0
 	nodes_per_cluster = int(num_nodes / num_clusters)
-	clusters = np.zeros((5, nodes_per_cluster), np.uint8) #Stores nodes in each cluster
+	clusters = np.zeros((num_clusters, nodes_per_cluster), np.uint8) #Stores nodes in each cluster
 
 	#Create clusters and add random edges within each cluster before merging them into single graph
 	for i in range(num_clusters):
@@ -197,7 +197,7 @@ def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_lo
 		node_num += 21
 
 	#Add random edges to any nodes to increase diversity
-	new_edges = np.random.randint(0, 20 * num_clusters, (int(20 * num_clusters * 0.1), 2))
+	new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.1), 2))
 	new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
 	new_edges = np.append(new_edges, new_weights, 1)
 	G.add_weighted_edges_from(new_edges)
