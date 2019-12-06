@@ -21,6 +21,8 @@ class ControllerEnv(gym.Env):
 	def __init__(self, graph, clusters, pos=None):
 		"""Initializes the environment (Runs at first)"""
 		print("Initialized environment!")
+		self.action_space = spaces.Box(np.zeros(len(clusters)), np.ones(len(clusters)) * len(graph.nodes), dtype=np.uint8)
+		#self.observation_space = spaces.Box(np.zeros(shape=len(graph.nodes)), np.ones(shape=len(graph.nodes)), dtype=np.bool)
 		self.original_graph = graph.copy()
 		if(pos is None):
 			self.pos = nx.spring_layout(graph)   # get the positions of the nodes of the graph
@@ -44,19 +46,23 @@ class ControllerEnv(gym.Env):
 		Otherwise, distance is the shortest-path distance between the source controller and destination
 		Add up all distances and have that as initial reward
 		"""
+		distance = 10000
 		#Create metagraph of controllers. The node at an index corresponds to the controller of the cluster of that index
-		controller_graph = self._set_controllers(action)
+		try:
+			controller_graph = self._set_controllers(action)
 
-		#Create "packets" with source, destination
-		packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(100, 2))
-		#Convert source and destination to cluster the source/destination is in
-		distance = 0
-		for i in range(packets.shape[0]):
-			if packets[i, 0] == packets[i, 1]:
-				continue
-			source_cluster = np.where(self.clusters == packets[i, 0])[0][0]
-			destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
-			distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
+			#Create "packets" with source, destination
+			packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(100, 2))
+			#Convert source and destination to cluster the source/destination is in
+			for i in range(packets.shape[0]):
+				if packets[i, 0] == packets[i, 1]:
+					continue
+				source_cluster = np.where(self.clusters == packets[i, 0])[0][0]
+				destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
+				distance -= nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
+		except AssertionError:
+			distance = 0
+		#Return output reward
 		return distance
 
 	def reset(self):
@@ -143,65 +149,60 @@ class ControllerEnv(gym.Env):
 
 
 
-def generateGraph(num_clusters, num_nodes, prob=0.2, weight_low=0, weight_high=100, draw=True):
+def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_low=0, weight_high=100, draw=True):
 	"""Generates graph given number of clusters and nodes
 	Args:
 		num_clusters: Number of clusters
 		num_nodes: Number of nodes
-		prob: Parameter for graph (probability of triangle after adding edge)
+		prob_cluster: Probability of adding edge between any two nodes within a cluster
+		prob: Probability of adding edge between any two nodes
 		weight_low: Lowest possible weight for edge in graph
 		weight_high: Highest possible weight for edge in graph
 		draw: Whether or not to show graph (True indicates to show)
 	
 	Returns:
-		Graph with nodes in clusters, array of clusters
+		Graph with nodes in clusters, array of clusters, graph position for drawing
 	"""
-	graph = nx.powerlaw_cluster_graph(num_nodes,3, prob, random.seed(2))  #originally a = None, version = 2 for random seed
+	node_colors = np.arange(0, num_nodes, 1, np.uint8) #Stores color of nodes
+	G = nx.Graph()
+	node_num = 0
+	nodes_per_cluster = int(num_nodes / num_clusters)
+	clusters = np.zeros((5, nodes_per_cluster), np.uint8) #Stores nodes in each cluster
 
-	traversal = list(nx.bfs_tree(graph, source = 0))    # get a bft of the graph in a list
-	array_traversal = np.array_split(traversal, num_clusters)      # split the bft list into equal parts
-	
+	#Create clusters and add random edges within each cluster before merging them into single graph
+	for i in range(num_clusters):
+		cluster = nx.random_tree(nodes_per_cluster)
+		new_edges = np.random.randint(0, nodes_per_cluster, (int(nodes_per_cluster * prob_cluster), 2))
+		new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
+		new_edges = np.append(new_edges, new_weights, 1)
+		cluster.add_weighted_edges_from(new_edges)
+		nx.set_node_attributes(cluster, i, 'cluster')
+		nx.set_node_attributes(cluster, 0.5, 'learning_automation')
+		node_colors[node_num:(node_num + nodes_per_cluster)] = i
+		node_num += nodes_per_cluster
+		clusters[i, :] = np.asarray(cluster.nodes) + nodes_per_cluster * i
+		G = nx.disjoint_union(G, cluster)
 
-	cluster_attrib = dict() # Dictionary that stores cluster number for each node
-	node_colors = np.arange(0, num_nodes, 1, np.uint8)
-	learning_automaton = dict();
+	#Add an edge to connect all clusters (to gurantee it is connected)
+	node_num = 0
+	for i in range(num_clusters - 1):
+		G.add_edge(node_num, node_num + 20, weight=random.randint(weight_low, weight_high))
+		node_num += 21
 
-	# Assign cluster attribute for each node
-	for node in graph.nodes:
-		for index, the_traversal in enumerate(array_traversal): # Get clusters and find cluster node is in
-			if node in the_traversal:
-				cluster_attrib[node] = index
-				node_colors[node] = index
-				learning_automaton[node] = 0.5 # the probability of becoming a controller
+	#Add random edges to any nodes to increase diversity
+	new_edges = np.random.randint(0, 20 * num_clusters, (int(20 * num_clusters * 0.1), 2))
+	new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
+	new_edges = np.append(new_edges, new_weights, 1)
+	G.add_weighted_edges_from(new_edges)
+	G.remove_edges_from(nx.selfloop_edges(G)) #Remove self-loops caused by adding random edges
 
-	# Set node cluster numbers and draw them
-	pos = nx.spring_layout(graph)
-	nx.set_node_attributes(graph, cluster_attrib, 'cluster')
-	nx.set_node_attributes(graph, learning_automaton, 'learning_automaton')
-	nx.draw_networkx_nodes(graph, pos, node_color=node_colors)
-
-	# Keeping Vincent's code in case we decide to have a legend for the cluster lables [Usaid]
-	#for index, the_traversal in enumerate(array_traversal): # for each cluster and index of the graph
-	#	subpos = dict()                                # create a sub dictionary of positions for each cluster's ndes
-	#	for key, value in pos.items():
-	#		if key in the_traversal:
-	#			subpos[key] = value
-	#	randColor = "#" + str(random.randint(0, 999999)).zfill(6)   # get a random hexadecimal colour
-	#	if draw:
-	#		nx.draw_networkx_nodes(graph.subgraph(the_traversal), subpos, node_color=randColor, label = "Cluster " + str(index))  # draw an individual cluster
-	
-	#Assign distance weights to edges
-	for edge in graph.edges:
-		graph.add_edge(edge[0], edge[1], weight=random.randint(weight_low, weight_high))
-	
+	#Draw graph
+	pos = nx.spring_layout(G)
 	if draw:
-		nx.draw_networkx_edges(graph, pos, graph.edges())        # draw the edges of the graph
-		nx.draw_networkx_labels(graph, pos)                      # draw  the labels of the graph
-		edge_labels = nx.get_edge_attributes(graph,'weight')
-		nx.draw_networkx_edge_labels(graph,pos,edge_labels=edge_labels) # draw the edge weights of the graph
-		#plt.savefig("path.png")
+		nx.draw_networkx_nodes(G, pos, node_color = node_colors)
+		nx.draw_networkx_labels(G, pos)
+		nx.draw_networkx_edges(G, pos, G.edges())
 		plt.draw()
-		plt.legend()
 		plt.show()
-	return graph, array_traversal, pos
+	return G, clusters, pos
 
