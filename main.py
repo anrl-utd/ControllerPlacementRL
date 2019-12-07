@@ -15,14 +15,19 @@ if __name__ == "__main__":
 	graph, clusters, pos = generateGraph(3, 45, draw=False)	#Generate graph
 	#Nudging environment
 	env = gym.make('Controller-RandomPlacement-v0', graph=graph, clusters=clusters, pos=pos)
+	#act = []
+	#for i in range(3):
+	#	act.append([5 - i for i in range(env.degree)])
+	#env.render()
+	#env.step(act)
 	#Agent
 	model = PPO1('MlpPolicy', env, tensorboard_log='train_log', verbose=1)
 	# Train the agent
-	model.learn(total_timesteps=int(1e5))
+	model.learn(total_timesteps=int(1e7))
 
 	loops = 0
 	obs = env.reset()
-	while loops < 100:
+	while loops < 1000:
 		action, states = model.predict(obs)
 		(obs, reward, _, _) = env.step(action)
 		print("CONTROLLERS:", env.controllers)
@@ -32,6 +37,7 @@ if __name__ == "__main__":
 	(best_controllers, best_dist) = env.calculateOptimal()
 	print("Optimal:", best_controllers)
 	print("Optimal Distance:", best_dist)
+	env.render()
 
 
 ##Base environment

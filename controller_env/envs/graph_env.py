@@ -30,6 +30,7 @@ class ControllerEnv(gym.Env):
 			self.pos = pos
 		self.clusters = np.stack(clusters)
 		self.graph = graph.copy()
+		self.degree = self._graph_degree()
 
 	def step(self, action):
 		"""Steps the environment once"""
@@ -45,7 +46,7 @@ class ControllerEnv(gym.Env):
 		Otherwise, distance is the shortest-path distance between the source controller and destination
 		Add up all distances and have that as initial reward
 		"""
-		distance = 10000
+		distance = 0
 		#Create metagraph of controllers. The node at an index corresponds to the controller of the cluster of that index
 		try:
 			controller_graph = self._set_controllers(action)
@@ -58,11 +59,11 @@ class ControllerEnv(gym.Env):
 					continue
 				source_cluster = np.where(self.clusters == packets[i, 0])[0][0]
 				destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
-				distance -= nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
+				distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
 		except AssertionError:
-			distance = 0
+			return -10000
 		#Return output reward
-		return distance
+		return -distance
 
 	def reset(self):
 		"""Resets the environment to initial state"""
@@ -130,6 +131,11 @@ class ControllerEnv(gym.Env):
 
 		return controller_graph
 
+	def _graph_degree(self):
+		"""Returns the highest degree of a node in the graph"""
+		return max([degree for node, degree in self.graph.degree()])
+			
+
 	def stepLA(self, graph, controllers):
 		"""
 		Helper function used to calculate distance between chosen controllers
@@ -178,16 +184,25 @@ def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_lo
 
 	#Create clusters and add random edges within each cluster before merging them into single graph
 	for i in range(num_clusters):
+		#Add tree to serve as base of cluster subgraph. Loop through all edges and assign weights to each
 		cluster = nx.random_tree(nodes_per_cluster)
+		for start, end in cluster.edges:
+			cluster.add_edge(start, end, weight=random.randint(weight_low, weight_high))
+
+		#Add edges to increase connectivity of cluster
 		new_edges = np.random.randint(0, nodes_per_cluster, (int(nodes_per_cluster * prob_cluster), 2))
 		new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
 		new_edges = np.append(new_edges, new_weights, 1)
 		cluster.add_weighted_edges_from(new_edges)
+
+		#Set attributes and colors
 		nx.set_node_attributes(cluster, i, 'cluster')
 		nx.set_node_attributes(cluster, 0.5, 'learning_automation')
 		node_colors[node_num:(node_num + nodes_per_cluster)] = i
 		node_num += nodes_per_cluster
 		clusters[i, :] = np.asarray(cluster.nodes) + nodes_per_cluster * i
+
+		#Merge cluster with main graph
 		G = nx.disjoint_union(G, cluster)
 
 	#Add an edge to connect all clusters (to gurantee it is connected)
