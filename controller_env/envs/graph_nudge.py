@@ -19,6 +19,7 @@ class ControllerRandomStart(ControllerEnv):
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = [np.random.choice(i) for i in self.clusters]
 		self.original_controllers = self.controllers.copy()
+		self.step_counter = 0
 
 	def step(self, action):
 		"""
@@ -48,7 +49,14 @@ class ControllerRandomStart(ControllerEnv):
 		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
 		state = np.zeros(shape=len(self.graph.nodes))
 		state[self.controllers] = 1
-		return (state, super().step(self.controllers), False, {})
+
+		#Have episodes terminate after 100 steps
+		done = False
+		if(self.step_counter > 100):
+			self.step_counter = 0
+			done = True
+		self.step_counter += 1
+		return (state, super().step(self.controllers), done, {})
 
 	def reset(self):
 		self.controllers = self.original_controllers.copy()

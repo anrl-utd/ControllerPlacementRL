@@ -32,7 +32,7 @@ class ControllerEnv(gym.Env):
 		self.graph = graph.copy()
 		self.degree = self._graph_degree()
 
-	def step(self, action):
+	def step(self, action, num_packets=100):
 		"""Steps the environment once"""
 		"""
 		How it works:
@@ -52,7 +52,7 @@ class ControllerEnv(gym.Env):
 			controller_graph = self._set_controllers(action)
 
 			#Create "packets" with source, destination
-			packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(100, 2))
+			packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(num_packets, 2))
 			#Convert source and destination to cluster the source/destination is in
 			for i in range(packets.shape[0]):
 				if packets[i, 0] == packets[i, 1]:
@@ -61,7 +61,7 @@ class ControllerEnv(gym.Env):
 				destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
 				distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
 		except AssertionError:
-			return -10000
+			return -100000
 		#Return output reward
 		return -distance
 
@@ -110,10 +110,10 @@ class ControllerEnv(gym.Env):
 		#Controllers were found to be valid. Now add controllers to complete metagraph.
 		#TODO: Optimize this, new_contr_indices and mapping can be reduced to a single variable (and possible a single line for the for)
 		new_contr_indices = []
-		mapping = defaultdict(list)
+		#mapping = defaultdict(list)
 		for i in range(len(controllers)):
 			new_contr_indices.append([i, controllers[i]])
-			mapping[i] = controllers[i]
+			#mapping[i] = controllers[i]
 		controller_graph = nx.complete_graph(len(new_contr_indices))	#Store controller metagraph
 		
 		for pair in itertools.combinations(new_contr_indices, 2):
@@ -135,6 +135,14 @@ class ControllerEnv(gym.Env):
 		"""Returns the highest degree of a node in the graph"""
 		return max([degree for node, degree in self.graph.degree()])
 			
+	def _random_valid_controllers(self):
+		"""Intended for testing, this gives a random set of valid controllers"""
+		cluster_arr = np.asarray(self.graph.nodes.data('cluster')) #Creates NumPy array with [node #, cluster #] rows
+		controller_indices = []
+		for cluster in range(self.clusters.shape[0]): #For every cluster
+			cluster_controller = np.random.choice(cluster_arr[cluster_arr[:, 1] == cluster][:, 0]) #Select all nodes of a cluster then choose one randomly
+			controller_indices.append(cluster_controller)
+		return controller_indices
 
 	def stepLA(self, graph, controllers):
 		"""
@@ -208,8 +216,8 @@ def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_lo
 	#Add an edge to connect all clusters (to gurantee it is connected)
 	node_num = 0
 	for i in range(num_clusters - 1):
-		G.add_edge(node_num, node_num + 20, weight=random.randint(weight_low, weight_high))
-		node_num += 21
+		G.add_edge(node_num, node_num + nodes_per_cluster, weight=random.randint(weight_low, weight_high))
+		node_num += nodes_per_cluster
 
 	#Add random edges to any nodes to increase diversity
 	new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.1), 2))
