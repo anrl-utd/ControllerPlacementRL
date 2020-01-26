@@ -174,7 +174,6 @@ class ControllerEnv(gym.Env):
 		return (min_combination, min_dist)
 
 
-
 def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_low=0, weight_high=100, draw=True):
 	"""Generates graph given number of clusters and nodes
 	Args:
