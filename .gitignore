@@ -11,6 +11,9 @@ __pycache__/
 # C extensions
 *.so
 
+# SQLite files
+*.db
+
 # Distribution / packaging
 .Python
 build/
@@ -461,3 +464,6 @@ healthchecksdb
 MigrationBackup/
 
 # End of https://www.gitignore.io/api/python,visualstudio
+/train_log
+/GraphNets
+/graphnets_testing.py
