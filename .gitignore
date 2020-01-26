@@ -465,3 +465,5 @@ MigrationBackup/
 
 # End of https://www.gitignore.io/api/python,visualstudio
 /train_log
+/GraphNets
+/graphnets_testing.py

@@ -35,10 +35,13 @@ class ControllerRandomStart(ControllerEnv):
 		act = np.split(action, 3)
 		new_controller_neighbor = np.argmax(act, axis=1)
 		for controller_index in range(len(act)):
+			if(new_controller_neighbor[controller_index] == 0):
+				continue	#Ignore moving if 0 index
 			neighbors = self.graph[self.controllers[controller_index]]
 			sorted_neighbors = sorted((weight['weight'], node) for (node, weight) in neighbors.items())
-			if(new_controller_neighbor[controller_index] < len(sorted_neighbors)):
-				self.controllers[controller_index] = sorted_neighbors[new_controller_neighbor[controller_index]][1]
+			#Subtract one since the first index indicates don't move
+			if(new_controller_neighbor[controller_index] - 1 < len(sorted_neighbors)):
+				self.controllers[controller_index] = sorted_neighbors[new_controller_neighbor[controller_index] - 1][1]
 			#if(action[controller_index] is 1):
 			#	neighbors = self.graph.neighbors(self.controllers[controller_index])
 			#	neigh = list(neighbors)

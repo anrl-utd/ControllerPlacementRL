@@ -38,8 +38,8 @@ def optimize_algorithm(trial):
 		action, states = model.predict(obs)
 		(obs, reward, _, _) = env.step(action)
 		loops += 1
-	trial.report(-reward)
-	return -reward #Optuna by default minimizes, so changing this to positive distance
+	trial.report(reward)
+	return reward #Optuna by default minimizes, so changing this to positive distance
 
 if __name__ == "__main__":
 	#I store the results in a SQLite database so that it can resume from checkpoints.

@@ -47,9 +47,12 @@ class ControllerEnv(gym.Env):
 		Add up all distances and have that as initial reward
 		"""
 		distance = 0
+		controller_graph = None
 		#Create metagraph of controllers. The node at an index corresponds to the controller of the cluster of that index
 		try:
 			controller_graph = self._set_controllers(action)
+			"""
+			Don't create packets, try having reward of total distance between all adjacent controllers
 
 			#Create "packets" with source, destination
 			packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(num_packets, 2))
@@ -60,10 +63,12 @@ class ControllerEnv(gym.Env):
 				source_cluster = np.where(self.clusters == packets[i, 0])[0][0]
 				destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
 				distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
+			"""
 		except AssertionError:
-			return -100000
+			return 100000
 		#Return output reward
-		return -distance
+		#return -distance
+		return controller_graph.size(weight='weight')
 
 	def reset(self):
 		"""Resets the environment to initial state"""
