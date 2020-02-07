@@ -11,8 +11,10 @@ import math
 
 from stable_baselines import PPO1
 import optuna
+import shutil
+import os
 
-def optimize_algorithm(trial):
+def optimize_algorithm(trial, env_name='Controller-Direct-v0'):
 	"""Optimizes an algorithm using Optuna (tries out different parameters)"""
 	#TODO: Ensure early pruning of trials occurs to speed up optimization (Tensorflow hook?)
 
@@ -25,7 +27,7 @@ def optimize_algorithm(trial):
 
 	graph, clusters, pos = generateGraph(3, 45, draw=False)	#Generate graph
 	#Nudging environment
-	env = gym.make('Controller-RandomPlacement-v0', graph=graph, clusters=clusters, pos=pos)
+	env = gym.make('Controller-Direct-v0', graph=graph, clusters=clusters, pos=pos)
 	#Agent
 	model = PPO1('MlpPolicy', env, tensorboard_log='train_log', verbose=0, **model_params)
 	# Train the agent
@@ -39,12 +41,23 @@ def optimize_algorithm(trial):
 		(obs, reward, _, _) = env.step(action)
 		loops += 1
 	trial.report(reward)
+
+	if(reward == 100000):
+		#Since I am unsure if Optuna does multiprocessing, I'm going to search the logging path for the last-logged
+		#and delete it if it isn't relevant
+		path = os.path.abspath(os.getcwd()) + '/train_log'
+		list_subfolders_with_paths = [f.path for f in os.scandir(path) if f.is_dir()]
+		paths = [int(f.split('/')[-1].split('_')[-1]) for f in list_subfolders_with_paths] #Can combine with previous line, but wanted readability
+		try:
+			shutil.rmtree(path + '/PPO1_' + str(sorted(paths)[-1]))
+		except OSError as e:
+			print("Error removing log file")
 	return reward #Optuna by default minimizes, so changing this to positive distance
 
 if __name__ == "__main__":
 	#I store the results in a SQLite database so that it can resume from checkpoints.
-	study = optuna.create_study(study_name='ppo_nudging', storage='sqlite:///params.db', load_if_exists=True)
-	study.optimize(optimize_algorithm, n_trials=1000)
+	study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_direct.db', load_if_exists=True)
+	study.optimize(optimize_algorithm, n_trials=500)
 
 #Training without Optuna, so that we can compare the trained model to best possible controllers
 #if __name__ == "__main__":

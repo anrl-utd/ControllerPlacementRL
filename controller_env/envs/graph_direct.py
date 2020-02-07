@@ -33,7 +33,7 @@ class ControllerDirectSelect(ControllerEnv):
 			Tuple of (State, Reward) after selecting controllers and passing to base environment (latency for 1000 packets)
 			State is a boolean array of size <number of switches> which indicates whether a switch is a controller or not
 		"""
-		self.controllers = action.argsort()[-len(controllers)][::-1]
+		self.controllers = action.argsort()[-len(self.controllers):][::-1]
 		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
 		state = np.zeros(shape=len(self.graph.nodes))
 		state[self.controllers] = 1

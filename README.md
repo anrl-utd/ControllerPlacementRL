@@ -11,3 +11,5 @@ This installs openai-gym and inserts the custom environment.
  -- Intended to be the basic implementations without graph kernels and other optimizations
  - **Controller-RandomStart-v0**
  -- Environment that "nudges" controllers (starting with random placement of controllers in each cluster) to adjacent nodes
+ - **Controller-Direct-v0**
+ -- Environment that directly selects node indices to be controllers
