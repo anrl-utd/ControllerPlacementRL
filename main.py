@@ -8,13 +8,15 @@ from controller_env.envs.graph_env import generateGraph
 import random
 import matplotlib.pyplot as plt
 import math
+import networkx as nx
 
 from stable_baselines import PPO1
 import optuna
 import shutil
+import pickle
 import os
 
-def optimize_algorithm(trial, env_name='Controller-Direct-v0'):
+def optimize_algorithm(trial, graph, clusters, env_name='Controller-Direct-v0'):
 	"""Optimizes an algorithm using Optuna (tries out different parameters)"""
 	#TODO: Ensure early pruning of trials occurs to speed up optimization (Tensorflow hook?)
 
@@ -25,7 +27,6 @@ def optimize_algorithm(trial, env_name='Controller-Direct-v0'):
 		'clip_param': trial.suggest_uniform('clip', 0.1, 0.4)
 	}
 
-	graph, clusters, pos = generateGraph(3, 45, draw=False)	#Generate graph
 	#Nudging environment
 	env = gym.make('Controller-Direct-v0', graph=graph, clusters=clusters, pos=pos)
 	#Agent
@@ -55,10 +56,22 @@ def optimize_algorithm(trial, env_name='Controller-Direct-v0'):
 	return reward #Optuna by default minimizes, so changing this to positive distance
 
 if __name__ == "__main__":
-	#I store the results in a SQLite database so that it can resume from checkpoints.
-	study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_direct.db', load_if_exists=True)
-	study.optimize(optimize_algorithm, n_trials=500)
-
+	graph = None
+	clusters = None
+	#This might be lazy code, but I think it is not worth importing more modules just to check if file exists before trying to open it
+	if os.path.isfile('clusters.pickle') and os.path.isfile('graph.gpickle'):
+		clusters = pickle.load(open('clusters.pickle', 'rb'))
+		graph = nx.read_gpickle('graph.gpickle')
+	else:
+		graph, clusters, pos = generateGraph(3, 45, draw=False)
+	try:
+		#I store the results in a SQLite database so that it can resume from checkpoints.
+		study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_direct.db', load_if_exists=True)
+		study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters), n_trials=500)
+	except KeyboardInterrupt:
+		print('Interrupted, saving . . . ')
+		nx.write_gpickle(graph, 'graph.gpickle')
+		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 #Training without Optuna, so that we can compare the trained model to best possible controllers
 #if __name__ == "__main__":
 #	graph, clusters, pos = generateGraph(3, 45, draw=False)	#Generate graph
