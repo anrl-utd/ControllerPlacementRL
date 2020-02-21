@@ -14,3 +14,8 @@ register(
     id='Controller-Direct-v0',
     entry_point='controller_env.envs:ControllerDirectSelect',
 )
+
+register(
+    id='Controller-Select-v0',
+    entry_point='controller_env.envs:ControllerSlowSelect',
+)

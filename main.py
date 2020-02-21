@@ -2,7 +2,7 @@
 Main code to create graph and run agent
 """
 import os
-os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
+os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1' #Necessary to supress Fortran overwriting keyboard interrupt (don't ask me why, idk but it works)
 import gym
 import numpy as np
 import controller_env
@@ -12,26 +12,27 @@ import matplotlib.pyplot as plt
 import math
 import networkx as nx
 
-from stable_baselines import PPO1
+from stable_baselines import PPO1, DQN
+from stable_baselines.deepq.policies import MlpPolicy
 import optuna
 import shutil
 import pickle
 import sys
 import signal
 
-def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Direct-v0'):
+def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-v0'):
 	"""Optimizes an algorithm using Optuna (tries out different parameters)"""
 	#TODO: Ensure early pruning of trials occurs to speed up optimization (Tensorflow hook?)
 	try:
 		model_params = {
-			'gamma': trial.suggest_loguniform('gamma', 0.9, 0.999),
-			'adam_epsilon': trial.suggest_uniform('adam_epsilon', 1e-8, 1e-4),
+			#'gamma': trial.suggest_loguniform('gamma', 0.9, 0.999),
+			'entcoeff': trial.suggest_loguniform('entcoeff', 0.01, 0.1),
 			'lam': trial.suggest_uniform('lam', 0.9, 1),
 			'clip_param': trial.suggest_uniform('clip', 0.1, 0.4)
 		}
 
 		#Nudging environment
-		env = gym.make('Controller-Direct-v0', graph=graph, clusters=clusters, pos=pos)
+		env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
 		#Agent
 		model = PPO1('MlpPolicy', env, tensorboard_log='train_log', verbose=0, **model_params)
 		# Train the agent
@@ -40,13 +41,16 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Direct-
 		loops = 0
 		obs = env.reset()
 		reward = 0 #We want the last reward to be minimal (perhaps instead do cumulative?)
-		while loops < 100:
+		done = False
+		while not done:
 			action, states = model.predict(obs)
-			(obs, reward, _, _) = env.step(action)
+			(obs, rew, done, _) = env.step(action)
+			reward += rew
 			loops += 1
-		trial.report(reward)
+		print(np.argwhere(obs))
+		trial.report(-reward)
 
-		if(reward == 100000):
+		if(reward >= 100000):
 			#Since I am unsure if Optuna does multiprocessing, I'm going to search the logging path for the last-logged
 			#and delete it if it isn't relevant
 			path = os.path.abspath(os.getcwd()) + '/train_log'
@@ -56,9 +60,28 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Direct-
 				shutil.rmtree(path + '/PPO1_' + str(sorted(paths)[-1]))
 			except OSError as e:
 				print("Error removing log file")
-		return reward #Optuna by default minimizes, so changing this to positive distance
-	except KeyboardInterrupt:
+		return -reward #Optuna by default minimizes, so changing this to positive distance
+	except KeyboardInterrupt: #Bug in Python multiprocessing, only Exceptions go through to main process
 		raise Exception
+
+def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
+	#Nudging environment
+	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
+	#Agent
+	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0)
+	# Train the agent
+	model.learn(total_timesteps=int(1e6))
+
+	loops = 0
+	obs = env.reset()
+	reward = 0 #We want the last reward to be minimal (perhaps instead do cumulative?)
+	done = False
+	while not done:
+		action, states = model.predict(obs)
+		(obs, rew, done, _) = env.step(action)
+		reward += rew
+		loops += 1
+	print(np.argwhere(obs))
 
 if __name__ == "__main__":
 	graph = None
@@ -73,16 +96,28 @@ if __name__ == "__main__":
 	else:
 		print("Generating graph")
 		graph, clusters, pos = generateGraph(3, 45, draw=False)
-
+	train_once(graph, clusters, pos)
 	try:
 		#I store the results in a SQLite database so that it can resume from checkpoints.
-		study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_direct.db', load_if_exists=True)
-		study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters, pos), n_trials=500)
+		#study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
+		#study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters, pos), n_trials=500)
+		train_once(graph, clusters, pos)
 	except:
 		print('Interrupted, saving . . . ')
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
+	"""
+	#Nudging environment
+	env = gym.make('Controller-Select-v0', graph=graph, clusters=clusters, pos=pos)
+	controllers = env._random_valid_controllers()
+	for cont in controllers:
+		obs, rew, done, _ = env.step(cont)
+		print(done)
+		print(rew)
+	"""
+
+
 #Training without Optuna, so that we can compare the trained model to best possible controllers
 #if __name__ == "__main__":
 #	graph, clusters, pos = generateGraph(3, 45, draw=False)	#Generate graph

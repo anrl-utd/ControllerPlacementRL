@@ -2,9 +2,9 @@ import numpy as np
 from gym import spaces
 import itertools
 from controller_env.envs.graph_env import ControllerEnv
-class ControllerDirectSelect(ControllerEnv):
+class ControllerSlowSelect(ControllerEnv):
 	"""
-	Environment that does 'nudging' of controllers (starts with random controller placement).
+	Environment that selects controllers one at a time, ends episode when all are selected
 	Input: Graph with clusters
 	Action: List of size controllers with elements that are a list of size largest degree of graph and probabilities for each neighbor to be controller.
 			Argmax across lists to choose index of neighbor to nudge controller to
@@ -13,12 +13,11 @@ class ControllerDirectSelect(ControllerEnv):
 	"""
 	def __init__(self, graph, clusters, pos=None):
 		"""Initilizes environment and assigns random nodes to be controllers"""
-		super().__init__(graph, clusters, pos)
-		self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
+		super().__init__(graph, clusters, pos, check_controller_num=False)
+		self.action_space = spaces.Discrete(len(graph.nodes))
+		#self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
-		self.controllers = [np.random.choice(i) for i in self.clusters]
-		self.original_controllers = self.controllers.copy()
-		self.step_counter = 0
+		self.controllers = []
 
 	def step(self, action):
 		"""
@@ -32,21 +31,14 @@ class ControllerDirectSelect(ControllerEnv):
 			Tuple of (State, Reward) after selecting controllers and passing to base environment (latency for 1000 packets)
 			State is a boolean array of size <number of switches> which indicates whether a switch is a controller or not
 		"""
-		self.controllers = action.argsort()[-len(self.controllers):][::-1]
+		self.controllers.append(action)
 		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
 		state = np.zeros(shape=len(self.graph.nodes))
 		state[self.controllers] = 1
-
-		#Have episodes terminate after 100 steps
-		done = False
-		if(self.step_counter > 100):
-			self.step_counter = 0
-			done = True
-		self.step_counter += 1
-		return (state, super().step(self.controllers), done, {})
+		(obs, rew, done, i) = (state, super().step(self.controllers), len(self.controllers) >= 3, {})
+		return (obs, -rew, done, i)
 
 	def reset(self):
-		self.controllers = self.original_controllers.copy()
+		self.controllers = []
 		state = np.zeros(shape=len(self.graph.nodes))
-		state[self.controllers] = 1
 		return state

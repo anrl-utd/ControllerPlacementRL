@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 class ControllerEnv(gym.Env):
 	"""Base environment used to simulate the network for the RL"""
 	metadata = {'render.modes' : ['human']}
-	def __init__(self, graph, clusters, pos=None):
+	def __init__(self, graph, clusters, pos=None, check_controller_num=True):
 		"""Initializes the environment (Runs at first)"""
 		print("Initialized environment!")
 		self.action_space = spaces.Box(np.zeros(len(clusters)), np.ones(len(clusters)) * len(graph.nodes), dtype=np.uint8)
@@ -31,6 +31,7 @@ class ControllerEnv(gym.Env):
 		self.clusters = np.stack(clusters)
 		self.graph = graph.copy()
 		self.degree = self._graph_degree()
+		self.check_controller_num = check_controller_num
 
 	def step(self, action, num_packets=100):
 		"""Steps the environment once"""
@@ -103,8 +104,9 @@ class ControllerEnv(gym.Env):
 		Raises:
 			AssertError: Issue with controller indices (not 1 per cluster)"""
 		#Ensure that these are valid controllers - all clusters have a controller
-		assert(len(controllers) == self.clusters.shape[0])
-		found_clusters = np.zeros((len(controllers)))	#Stores what clusters have controllers been found for
+		if self.check_controller_num:
+			assert(len(controllers) == self.clusters.shape[0])
+		found_clusters = np.zeros((len(self.clusters)))	#Stores what clusters have controllers been found for
 		clusters = nx.get_node_attributes(self.graph, 'cluster')
 		index = 0
 		for controller in controllers:
