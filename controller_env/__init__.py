@@ -12,5 +12,5 @@ register(
 
 register(
     id='Controller-Direct-v0',
-    entry_piont='controller_env.envs:ControllerDirectSelect',
+    entry_point='controller_env.envs:ControllerDirectSelect',
 )

@@ -14,6 +14,7 @@ import itertools
 import pprint
 from collections import defaultdict
 warnings.filterwarnings("ignore", category=UserWarning)
+random.seed(0)
 
 class ControllerEnv(gym.Env):
 	"""Base environment used to simulate the network for the RL"""

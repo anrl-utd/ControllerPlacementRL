@@ -2,9 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6c36dc9b-1015-416e-99f6-853819871de9" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/controller_env/envs/graph_remove.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/LeaderElectionRL-master.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LeaderElectionRL-master.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller_env/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller_env/envs/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/envs/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller_env/envs/graph_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/envs/graph_env.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
@@ -14,12 +17,22 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FavoritesManager">
+    <favorites_list name="ControllerPlacementRL" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectId" id="1U1G3plhXkBWHCwL1xBK7s4K5y4" />
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/conda" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunDashboard">
@@ -35,6 +48,27 @@
     </option>
   </component>
   <component name="RunManager" selected="Python.main">
+    <configuration name="__init__ (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="LeaderElectionRL-master" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller_env/envs" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller_env/envs/__init__.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="LeaderElectionRL-master" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -77,6 +111,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="graph_remove" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="LeaderElectionRL-master" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller_env/envs" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/controller_env/envs/graph_remove.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="LeaderElectionRL-master" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -98,33 +153,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="setup" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="LeaderElectionRL-master" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/setup.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.graph_remove" />
+        <item itemvalue="Python.__init__ (1)" />
         <item itemvalue="Python.__init__" />
         <item itemvalue="Python.graph_env" />
-        <item itemvalue="Python.setup" />
       </list>
     </recent_temporary>
   </component>
@@ -159,15 +194,46 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>20</line>
-          <option name="timeStamp" value="8" />
+          <line>109</line>
+          <option name="timeStamp" value="26" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>80</line>
-          <option name="timeStamp" value="26" />
+          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
+          <line>327</line>
+          <option name="timeStamp" value="27" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
+          <line>330</line>
+          <option name="timeStamp" value="29" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
+          <line>353</line>
+          <option name="timeStamp" value="31" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
+          <line>349</line>
+          <option name="timeStamp" value="33" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
+          <line>364</line>
+          <option name="timeStamp" value="34" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
+          <line>368</line>
+          <option name="timeStamp" value="36" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="self.metadata" />
+        <watch expression="self.graph.node._nodes[22]" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>
