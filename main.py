@@ -11,7 +11,7 @@ import random
 import matplotlib.pyplot as plt
 import math
 import networkx as nx
-random.seed(0)
+random.seed(3)
 from stable_baselines import PPO2
 import optuna
 
@@ -53,21 +53,24 @@ import optuna
 #Training without Optuna, so that we can compare the trained model to best possible controllers
 if __name__ == "__main__":
 	num_correct = 0
-	# for x in range(100, 200):
-	# 	np.random.seed(x)
-	# 	graph, clusters, bridge_nodes, pos = generateGraph(3, 60, draw=False)  # Generate graph
-	# 	# Nudging environment
-	# 	env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes=bridge_nodes, pos=pos)
-	# 	best_action = env.best_action()
-	# 	best_action.sort()
-	# 	optimal_action = env.calculateOptimal()
-	# 	print(env.findGraphCentroid())
-	# 	print("Heuristic action:", best_action)
-	# 	print("Optimal action:", list(optimal_action[0]))
-	# 	print("Equal? : ", best_action == list(optimal_action[0]))
-	# 	if best_action == list(optimal_action[0]):
-	# 		num_correct+=1
-	# 	print(num_correct / (x-99))
+	for x in range(100, 200):
+		np.random.seed(x)
+		graph, clusters, bridge_nodes, pos = generateGraph(3, 18, draw=False)  # Generate graph
+		# Nudging environment
+		env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes=bridge_nodes, pos=pos)
+		best_action = env.best_action()
+		best_action.sort()
+		optimal_action = env.calculateOptimal()
+		print(env.findGraphCentroid())
+		print("Heuristic action:", best_action)
+		print("Optimal action:", list(optimal_action[0]))
+		print("Equal? : ", best_action == list(optimal_action[0]))
+		if best_action == list(optimal_action[0]):
+			num_correct+=1
+		else:
+			env.renderCentroid(best_action)
+			env.renderCentroid(optimal_action[0])
+		print(num_correct / (x-99))
 	graph, clusters, bridge_nodes, pos = generateGraph(4 , 24, draw=False)	#Generate graph
 	#Nudging environment
 	print(gym.envs.registry.all())

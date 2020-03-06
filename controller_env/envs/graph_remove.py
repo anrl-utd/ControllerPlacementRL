@@ -18,7 +18,7 @@ import heapq
 
 warnings.filterwarnings("ignore", category=UserWarning)
 random.seed(0)
-np.random.seed(2)
+np.random.seed(3)
 
 
 
@@ -147,7 +147,7 @@ class ControllerRemove(gym.Env):
         #     node_colors[controller] = len(self.clusters) + 2
         node_colors[graph_centroid[0]] = len(self.clusters) + 1
         for index in range(len(node_size)):
-            if index not in controllers:
+            if index not in controllers and index != graph_centroid[0]:
                 node_size[index] = 300
             else:
                 node_size[index] = 1000

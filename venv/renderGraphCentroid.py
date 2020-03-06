@@ -14,7 +14,7 @@ def renderCentroid(self, controllers, mode='human', close=False):
     #     node_colors[controller] = len(self.clusters) + 2
     node_colors[graph_centroid[0]] = len(self.clusters) + 1
     for index in range(len(node_size)):
-        if index not in controllers:
+        if index not in controllers and index != graph_centroid[0]:
             node_size[index] = 300
         else:
             node_size[index] = 1000
