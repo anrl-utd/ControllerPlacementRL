@@ -70,18 +70,21 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	#Agent
 	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0)
 	# Train the agent
-	model.learn(total_timesteps=int(1e6))
+	model.learn(total_timesteps=int(10))#int(1e6))
 
 	loops = 0
 	obs = env.reset()
 	reward = 0 #We want the last reward to be minimal (perhaps instead do cumulative?)
 	done = False
+	action = None
 	while not done:
 		action, states = model.predict(obs)
 		(obs, rew, done, _) = env.step(action)
 		reward += rew
 		loops += 1
+	env.render()
 	print(np.argwhere(obs))
+	print(env.controllers)
 
 if __name__ == "__main__":
 	graph = None
@@ -95,8 +98,7 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(3, 45, draw=False)
-	train_once(graph, clusters, pos)
+		graph, clusters, pos = generateGraph(9, 90, draw=False)
 	try:
 		#I store the results in a SQLite database so that it can resume from checkpoints.
 		#study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)

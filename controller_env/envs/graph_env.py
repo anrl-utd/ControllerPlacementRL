@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 class ControllerEnv(gym.Env):
 	"""Base environment used to simulate the network for the RL"""
 	metadata = {'render.modes' : ['human']}
-	def __init__(self, graph, clusters, pos=None, check_controller_num=True):
+	def __init__(self, graph: nx.Graph, clusters: list, pos: dict=None, check_controller_num=True):
 		"""Initializes the environment (Runs at first)"""
 		print("Initialized environment!")
 		self.action_space = spaces.Box(np.zeros(len(clusters)), np.ones(len(clusters)) * len(graph.nodes), dtype=np.uint8)
@@ -32,8 +32,9 @@ class ControllerEnv(gym.Env):
 		self.graph = graph.copy()
 		self.degree = self._graph_degree()
 		self.check_controller_num = check_controller_num
+		self.current_controllers = None
 
-	def step(self, action, num_packets=100):
+	def step(self, action: list, num_packets: int=100) -> int:
 		"""Steps the environment once"""
 		"""
 		How it works:
@@ -75,7 +76,7 @@ class ControllerEnv(gym.Env):
 		"""Resets the environment to initial state"""
 		print("Reset environment")
 
-	def render(self, mode='human', close=False):
+	def render(self, mode: str='human', close=False):
 		"""Renders the environment once"""
 		plt.clf()	# Clear the matplotlib figure
 
@@ -85,7 +86,10 @@ class ControllerEnv(gym.Env):
 		clustering = nx.get_node_attributes(self.graph, 'cluster')
 		for node in clustering:
 			node_colors[node] = clustering[node]
-		nx.draw_networkx_nodes(self.graph, self.pos, node_color=node_colors)
+		node_sizes = np.ones((len(self.graph))) * 300
+		if self.controllers is not None:
+			node_sizes[self.controllers] = 1000
+		nx.draw_networkx_nodes(self.graph, self.pos, node_color=node_colors, node_size=node_sizes)
 		nx.draw_networkx_edges(self.graph, self.pos, self.graph.edges())        # draw the edges of the self.graph
 		nx.draw_networkx_labels(self.graph, self.pos)                      # draw  the labels of the self.graph
 		edge_labels = nx.get_edge_attributes(self.graph,'weight')
@@ -93,7 +97,7 @@ class ControllerEnv(gym.Env):
 		plt.draw()
 		plt.show()
 
-	def _set_controllers(self, controllers):
+	def _set_controllers(self, controllers: list):
 		"""Creates metagraph of controllers
 		Args:
 			controllers: Array of controller indices
@@ -126,16 +130,7 @@ class ControllerEnv(gym.Env):
 		for pair in itertools.combinations(new_contr_indices, 2):
 			controller_graph.add_edge(pair[0][0], pair[1][0], weight=nx.dijkstra_path_length(self.graph, source=pair[0][1], target=pair[1][1]))
 
-		##Display metagraph for debugging. Should be removed once we get _set_controllers() working
-		#display_graph = nx.relabel_nodes(controller_graph, mapping)
-		## nx.draw_networkx_nodes(display_graph,self. pos)
-		#nx.draw_networkx_edges(display_graph, self.pos, display_graph.edges())        # draw the edges of the display_graph
-		#nx.draw_networkx_labels(display_graph, self.pos)                      # draw  the labels of the display_graph
-		#edge_labels = nx.get_edge_attributes(display_graph,'weight')
-		#nx.draw_networkx_edge_labels(display_graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the display_graph
-		#plt.draw()
-		#plt.show()
-
+		self.current_controllers = controllers
 		return controller_graph
 
 	def _graph_degree(self):
@@ -151,7 +146,7 @@ class ControllerEnv(gym.Env):
 			controller_indices.append(cluster_controller)
 		return controller_indices
 
-	def stepLA(self, graph, controllers):
+	def stepLA(self, graph: nx.Graph, controllers: list):
 		"""
 		Helper function used to calculate distance between chosen controllers
 		:param controllers: The list of chosen controllers in which to calculate distance between
@@ -176,7 +171,7 @@ class ControllerEnv(gym.Env):
 		return (min_combination, min_dist)
 
 
-def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_low=0, weight_high=100, draw=True):
+def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, prob: float=0.2, weight_low: int=0, weight_high: int=100, draw=True) -> (nx.Graph, list, dict):
 	"""Generates graph given number of clusters and nodes
 	Args:
 		num_clusters: Number of clusters

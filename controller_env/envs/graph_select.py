@@ -18,6 +18,7 @@ class ControllerSlowSelect(ControllerEnv):
 		#self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = []
+		self.num_clusters = clusters.shape[0]
 
 	def step(self, action):
 		"""
@@ -35,7 +36,7 @@ class ControllerSlowSelect(ControllerEnv):
 		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
 		state = np.zeros(shape=len(self.graph.nodes))
 		state[self.controllers] = 1
-		(obs, rew, done, i) = (state, super().step(self.controllers), len(self.controllers) >= 3, {})
+		(obs, rew, done, i) = (state, super().step(self.controllers), len(self.controllers) >= self.num_clusters, {})
 		return (obs, -rew, done, i)
 
 	def reset(self):
