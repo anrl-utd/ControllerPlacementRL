@@ -2,14 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6c36dc9b-1015-416e-99f6-853819871de9" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/controller_env/envs/graph_remove.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/LeaderElectionRL-master.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LeaderElectionRL-master.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller_env/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller_env/envs/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/envs/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller_env/envs/graph_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/envs/graph_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controller_env/envs/graph_remove.py" beforeDir="false" afterPath="$PROJECT_DIR$/controller_env/envs/graph_remove.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/venv/renderGraphCentroid.py" beforeDir="false" afterPath="$PROJECT_DIR$/venv/renderGraphCentroid.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -194,38 +190,28 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>109</line>
+          <line>112</line>
           <option name="timeStamp" value="26" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
-          <line>327</line>
+          <line>368</line>
           <option name="timeStamp" value="27" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
-          <line>330</line>
+          <line>371</line>
           <option name="timeStamp" value="29" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
-          <line>353</line>
+          <line>394</line>
           <option name="timeStamp" value="31" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
-          <line>349</line>
+          <line>390</line>
           <option name="timeStamp" value="33" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
-          <line>364</line>
-          <option name="timeStamp" value="34" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/controller_env/envs/graph_remove.py</url>
-          <line>368</line>
-          <option name="timeStamp" value="36" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

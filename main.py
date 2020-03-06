@@ -53,28 +53,29 @@ import optuna
 #Training without Optuna, so that we can compare the trained model to best possible controllers
 if __name__ == "__main__":
 	num_correct = 0
-	for x in range(100, 200):
-		np.random.seed(x)
-		graph, clusters, bridge_nodes, pos = generateGraph(3, 60, draw=False)  # Generate graph
-		# Nudging environment
-		env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes=bridge_nodes, pos=pos)
-		best_action = env.best_action()
-		best_action.sort()
-		optimal_action = env.calculateOptimal()
-		print(env.findGraphCentroid())
-		print("Heuristic action:", best_action)
-		print("Optimal action:", list(optimal_action[0]))
-		print("Equal? : ", best_action == list(optimal_action[0]))
-		if best_action == list(optimal_action[0]):
-			num_correct+=1
-		print(num_correct / (x-99))
+	# for x in range(100, 200):
+	# 	np.random.seed(x)
+	# 	graph, clusters, bridge_nodes, pos = generateGraph(3, 60, draw=False)  # Generate graph
+	# 	# Nudging environment
+	# 	env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes=bridge_nodes, pos=pos)
+	# 	best_action = env.best_action()
+	# 	best_action.sort()
+	# 	optimal_action = env.calculateOptimal()
+	# 	print(env.findGraphCentroid())
+	# 	print("Heuristic action:", best_action)
+	# 	print("Optimal action:", list(optimal_action[0]))
+	# 	print("Equal? : ", best_action == list(optimal_action[0]))
+	# 	if best_action == list(optimal_action[0]):
+	# 		num_correct+=1
+	# 	print(num_correct / (x-99))
 	graph, clusters, bridge_nodes, pos = generateGraph(4 , 24, draw=False)	#Generate graph
 	#Nudging environment
 	print(gym.envs.registry.all())
 	env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes = bridge_nodes, pos=pos)
+
 	print(env.findGraphCentroid())
 	# env.repeatBestAction()
-	env.render()
+	# env.render()
 	# env.showSubgraph(1)
 	# env.minimumSpanningTree()
 	# env.render()
@@ -85,7 +86,9 @@ if __name__ == "__main__":
 	t1 = time.time()
 	print("Answer is:", answer)
 	print("The time was", t1-t0)
-
+	print("This is the new graph rendering!")
+	print(type(answer))
+	env.renderCentroid(answer)
 	print("This is path to centroid optimal")
 	t0 = time.time()
 	answer = env.best_action()

@@ -55,3 +55,24 @@ def findGraphCentroid(self):
             best_node = cur_node
     return best_node, lowest_weight
 
+def graphCentroidAction(self):
+    actions = []
+    centroid = self.findGraphCentroid()[0]
+    for index, cluster in enumerate(self.clusters):
+        if self.graph.nodes[centroid]['cluster'] == index:
+            continue
+        bestNode = None
+        lowestDistance = 100000000
+        for node in cluster:
+            if nx.shortest_path_length(self.graph, centroid, node, weight = 'weight') < lowestDistance:
+                lowestDistance = nx.shortest_path_length(self.graph, centroid, node, weight = 'weight')
+                bestNode = node
+        actions.append(bestNode)
+    bestNode = None
+    lowestDistance = 10000000
+    for node in self.clusters[self.graph.nodes[centroid]['cluster']]:
+        if self.calculateDistance(actions + [node]) < lowestDistance:
+            lowestDistance = self.calculateDistance(actions + [node])
+            bestNode = node
+    actions.append(bestNode)
+    return actions
