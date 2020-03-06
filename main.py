@@ -70,7 +70,7 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	#Agent
 	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0)
 	# Train the agent
-	model.learn(total_timesteps=int(10))#int(1e6))
+	model.learn(total_timesteps=int(1e6))
 
 	loops = 0
 	obs = env.reset()
@@ -83,8 +83,6 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 		reward += rew
 		loops += 1
 	env.render()
-	print(np.argwhere(obs))
-	print(env.controllers)
 
 if __name__ == "__main__":
 	graph = None
