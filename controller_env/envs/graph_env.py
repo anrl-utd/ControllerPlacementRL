@@ -67,7 +67,7 @@ class ControllerEnv(gym.Env):
 				distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
 			"""
 		except AssertionError:
-			return 100000
+			return 10000
 		#Return output reward
 		#return -distance
 		return controller_graph.size(weight='weight')
@@ -169,6 +169,52 @@ class ControllerEnv(gym.Env):
 				min_dist = dist
 				min_combination = combination
 		return (min_combination, min_dist)
+
+	def findGraphCentroid(self):
+		lowest_weight = 100000000
+		best_node = -1
+		for cur_node in self.graph.nodes:
+			cur_weight = 0
+			for other_node in self.graph.nodes:
+				if other_node == cur_node:
+					continue
+				cur_weight += nx.shortest_path_length(self.graph, cur_node, other_node, weight = 'weight')
+			# print("This is the length to all other nodes:", cur_weight, cur_node)
+			if cur_weight < lowest_weight:
+				lowest_weight = cur_weight
+				best_node = cur_node
+		return best_node, lowest_weight
+
+	def calculateDistance(self, actions):
+		totalDist = 0
+		for action in list(itertools.combinations(actions, 2)):
+			# print("distance to find is: ", action)
+			# print(nx.shortest_path_length(self.graph, action[0], action[1], weight='weight'))
+			totalDist += nx.shortest_path_length(self.graph, action[0], action[1], weight = 'weight')
+		return totalDist
+
+	def graphCentroidAction(self):
+		actions = []
+		centroid = self.findGraphCentroid()[0]
+		print("CENTROID: ", centroid)
+		for index, cluster in enumerate(self.clusters):
+			if self.graph.nodes[centroid]['cluster'] == index:
+				continue
+			bestNode = None
+			lowestDistance = 100000000
+			for node in cluster:
+				if nx.shortest_path_length(self.graph, centroid, node, weight = 'weight') < lowestDistance:
+					lowestDistance = nx.shortest_path_length(self.graph, centroid, node, weight = 'weight')
+					bestNode = node
+			actions.append(bestNode)
+		bestNode = None
+		lowestDistance = 10000000
+		for node in self.clusters[self.graph.nodes[centroid]['cluster']]:
+			if self.calculateDistance(actions + [node]) < lowestDistance:
+				lowestDistance = self.calculateDistance(actions + [node])
+				bestNode = node
+		actions.append(bestNode)
+		return actions
 
 
 def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, prob: float=0.2, weight_low: int=0, weight_high: int=100, draw=True) -> (nx.Graph, list, dict):

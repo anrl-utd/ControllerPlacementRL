@@ -2,7 +2,7 @@
 Main code to create graph and run agent
 """
 import os
-os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1' #Necessary to supress Fortran overwriting keyboard interrupt (don't ask me why, idk but it works)
+os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # Necessary to supress Fortran overwriting keyboard interrupt (don't ask me why, idk but it works)
 import gym
 import numpy as np
 import controller_env
@@ -14,6 +14,7 @@ import networkx as nx
 
 from stable_baselines import PPO1, DQN
 from stable_baselines.deepq.policies import MlpPolicy
+from stable_baselines.deepq.replay_buffer import ReplayBuffer  # PrioritizedReplayBuffer vs ReplayBuffer, what is the difference?
 import optuna
 import shutil
 import pickle
@@ -67,22 +68,49 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-
 def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	#Nudging environment
 	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
+
+	# Generate custom replay buffer full of valid experiences to speed up exploration of training
+	def add_wrapper(replay_buffer):
+		# Replay buffer maxsize is by default 50000. Should this be lowered?
+		valid_controllers_set = [env._random_valid_controllers() for i in range(int(replay_buffer._maxsize / len(clusters)))]
+	
+		for valid_controllers in valid_controllers_set:
+			obs_current = env.reset()
+			for controller in valid_controllers:
+				(obs, rew, done, _) = env.step(controller)
+				replay_buffer.add(obs_current, controller, rew, obs, done)
+				obs_current = obs
+		return replay_buffer
+
 	#Agent
 	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0)
 	# Train the agent
-	model.learn(total_timesteps=int(1e6))
+	model.learn(total_timesteps=int(1e6), replay_wrapper=add_wrapper)
 
-	loops = 0
+	# Run a single run to evaluate the DQN
 	obs = env.reset()
 	reward = 0 #We want the last reward to be minimal (perhaps instead do cumulative?)
+	reward_final = 0
 	done = False
 	action = None
 	while not done:
 		action, states = model.predict(obs)
 		(obs, rew, done, _) = env.step(action)
 		reward += rew
-		loops += 1
+		reward_final = rew
+	
+	# Show controllers chosen by the model
 	env.render()
+	print(env.controllers, reward_final)
+
+	# Show controllers chosen using heuristic
+	env.reset()
+	centroid_controllers = env.graphCentroidAction()
+	for cont in centroid_controllers:
+		(_, reward_final, _, _) = env.step(cont)
+	env.render()
+	print(env.controllers, reward_final)
+
 
 if __name__ == "__main__":
 	graph = None
@@ -96,13 +124,14 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(9, 90, draw=False)
+		graph, clusters, pos = generateGraph(3, 45, draw=False)
 	try:
 		#I store the results in a SQLite database so that it can resume from checkpoints.
 		#study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
 		#study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters, pos), n_trials=500)
 		train_once(graph, clusters, pos)
-	except:
+	except Exception as e:
+		print(e)
 		print('Interrupted, saving . . . ')
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))

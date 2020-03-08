@@ -19,6 +19,7 @@ class ControllerSlowSelect(ControllerEnv):
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = []
 		self.num_clusters = clusters.shape[0]
+		print(self.num_clusters)
 
 	def step(self, action):
 		"""
