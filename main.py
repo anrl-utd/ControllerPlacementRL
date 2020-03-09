@@ -80,12 +80,13 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 				(obs, rew, done, _) = env.step(controller)
 				replay_buffer.add(obs_current, controller, rew, obs, done)
 				obs_current = obs
+		print(replay_buffer._storage)
 		return replay_buffer
 
 	#Agent
 	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0)
 	# Train the agent
-	model.learn(total_timesteps=int(1e6), replay_wrapper=add_wrapper)
+	model.learn(total_timesteps=int(1e6))#, replay_wrapper=add_wrapper)
 
 	# Run a single run to evaluate the DQN
 	obs = env.reset()
@@ -124,7 +125,10 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(3, 45, draw=False)
+		graph, clusters, pos = generateGraph(6, 90, draw=False)
+		nx.write_gpickle(graph, 'graph.gpickle')
+		pickle.dump(clusters, open('clusters.pickle', 'wb'))
+		pickle.dump(pos, open('position.pickle', 'wb'))
 	try:
 		#I store the results in a SQLite database so that it can resume from checkpoints.
 		#study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
@@ -146,6 +150,7 @@ if __name__ == "__main__":
 		print(rew)
 	"""
 
+#DQN trials: DQN_15 for DQN_3C_45N_Replay_1, DQN_18 for DQN_3C_45N_NoReplay_1
 
 #Training without Optuna, so that we can compare the trained model to best possible controllers
 #if __name__ == "__main__":
