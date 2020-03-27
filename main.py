@@ -68,11 +68,12 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-
 def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	#Nudging environment
 	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
-
+	env.reset()
+	optimal_controllers = env.calculateOptimal()
 	# Generate custom replay buffer full of valid experiences to speed up exploration of training
 	def add_wrapper(replay_buffer):
 		# Replay buffer maxsize is by default 50000. Should this be lowered?
-		valid_controllers_set = [env._random_valid_controllers() for i in range(int(replay_buffer._maxsize / len(clusters)))]
+		valid_controllers_set = [env._random_valid_controllers() for i in range(int(replay_buffer._maxsize * 0.5 / len(clusters)))]
 	
 		for valid_controllers in valid_controllers_set:
 			obs_current = env.reset()
@@ -80,13 +81,13 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 				(obs, rew, done, _) = env.step(controller)
 				replay_buffer.add(obs_current, controller, rew, obs, done)
 				obs_current = obs
-		print(replay_buffer._storage)
+		print(replay_buffer._storage[:5])
 		return replay_buffer
 
 	#Agent
-	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0)
+	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0, exploration_initial_eps=0.1, exploration_fraction=0.05, learning_starts=0, target_network_update_freq=100)
 	# Train the agent
-	model.learn(total_timesteps=int(1e6))#, replay_wrapper=add_wrapper)
+	model.learn(total_timesteps=int(1e6), replay_wrapper=add_wrapper)
 
 	# Run a single run to evaluate the DQN
 	obs = env.reset()
@@ -112,6 +113,13 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	env.render()
 	print(env.controllers, reward_final)
 
+	#Show optimal
+	env.reset()
+	for cont in optimal_controllers[0]:
+		(_, reward_final, _, _) = env.step(cont)
+	env.render()
+	print(env.controllers, reward_final)
+	print(optimal_controllers)
 
 if __name__ == "__main__":
 	graph = None
@@ -125,7 +133,7 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(6, 90, draw=False)
+		graph, clusters, pos = generateGraph(3, 45, draw=False)
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
@@ -140,15 +148,6 @@ if __name__ == "__main__":
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
-	"""
-	#Nudging environment
-	env = gym.make('Controller-Select-v0', graph=graph, clusters=clusters, pos=pos)
-	controllers = env._random_valid_controllers()
-	for cont in controllers:
-		obs, rew, done, _ = env.step(cont)
-		print(done)
-		print(rew)
-	"""
 
 #DQN trials: DQN_15 for DQN_3C_45N_Replay_1, DQN_18 for DQN_3C_45N_NoReplay_1
 

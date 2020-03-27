@@ -471,3 +471,4 @@ MigrationBackup/
 /train_log
 /GraphNets
 /graphnets_testing.py
+/train_log_old

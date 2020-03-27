@@ -18,6 +18,7 @@ class ControllerSlowSelect(ControllerEnv):
 		#self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = []
+
 		self.num_clusters = clusters.shape[0]
 		print(self.num_clusters)
 
@@ -44,3 +45,17 @@ class ControllerSlowSelect(ControllerEnv):
 		self.controllers = []
 		state = np.zeros(shape=len(self.graph.nodes))
 		return state
+
+	def calculateOptimal(self):
+		"""
+		Override of the calculateOptimal() in the base environment class
+		"""
+		combinations = list(itertools.product(*self.clusters))
+		min_dist = 1000000
+		min_combination = None
+		for combination in combinations:
+			dist = super().step(combination)
+			if(dist < min_dist):
+				min_dist = dist
+				min_combination = combination
+		return (min_combination, min_dist)
