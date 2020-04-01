@@ -267,10 +267,10 @@ def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, pr
 		node_num += nodes_per_cluster
 
 	#Add random edges to any nodes to increase diversity
-	new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.1), 2))
-	new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
-	new_edges = np.append(new_edges, new_weights, 1)
-	G.add_weighted_edges_from(new_edges)
+	#new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.1), 2))
+	#new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
+	#new_edges = np.append(new_edges, new_weights, 1)
+	#G.add_weighted_edges_from(new_edges)
 	G.remove_edges_from(nx.selfloop_edges(G)) #Remove self-loops caused by adding random edges
 
 	#Draw graph

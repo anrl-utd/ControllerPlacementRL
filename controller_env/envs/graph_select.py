@@ -1,6 +1,7 @@
 import numpy as np
 from gym import spaces
 import itertools
+import networkx as nx
 from controller_env.envs.graph_env import ControllerEnv
 class ControllerSlowSelect(ControllerEnv):
 	"""
@@ -18,33 +19,48 @@ class ControllerSlowSelect(ControllerEnv):
 		#self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = []
+		self.best_controllers = []
+		self.best_reward = 100000
 
 		self.num_clusters = clusters.shape[0]
 		print(self.num_clusters)
+
+		# Created to speed up getting cluster info since graph is static
+		cluster_info = nx.get_node_attributes(self.graph, 'cluster')
+		self.cluster_info = np.array(list(cluster_info.items()), dtype=np.int32)  # Construct numpy array as [[node num, cluster num], [..]]
+
+		# Created to speed up creating observation
+		self.state = np.zeros(shape=len(self.graph.nodes))
 
 	def step(self, action):
 		"""
 		Steps environment once.
 		Args:
 			action: Action to perform
-					List of size number of graph nodes
-                    Similar to state, argmax of top (# of clusters) are labeled as controllers
-					[0, 1, 0.9, 0.2, 0.3, ...] example for graph with degree 5
+					Index of node to set as controller
 		Returns:
 			Tuple of (State, Reward) after selecting controllers and passing to base environment (latency for 1000 packets)
 			State is a boolean array of size <number of switches> which indicates whether a switch is a controller or not
 		"""
 		self.controllers.append(action)
-		#Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
-		state = np.zeros(shape=len(self.graph.nodes))
-		state[self.controllers] = 1
-		(obs, rew, done, i) = (state, super().step(self.controllers), len(self.controllers) >= self.num_clusters, {})
+		# Construct the state (boolean array of size <number of switches> indicating whether a switch is a controller)
+		action_cluster = self.cluster_info[self.cluster_info[:, 0] == action][0][1]  # Get the cluster the action is part of
+		
+		self.state[(self.cluster_info[:, 1] == action_cluster) & (self.state != 1)] = -1  # Set all nodes of same cluster except controllers as -1
+		self.state[action] = 1  # Set new controller as 1
+
+		# TODO: Speed up by using self.state == -1 to determine if the action is erroneous and just set reward of -10000 (no need to do controller setting)
+		(obs, rew, done, i) = (self.state.copy(), super().step(self.controllers), len(self.controllers) >= self.num_clusters, {})
+		if done:
+			if self.best_reward > rew:
+				self.best_controllers = self.controllers
+				self.best_reward = rew
 		return (obs, -rew, done, i)
 
 	def reset(self):
 		self.controllers = []
-		state = np.zeros(shape=len(self.graph.nodes))
-		return state
+		self.state = np.zeros(shape=len(self.graph.nodes))
+		return self.state.copy()
 
 	def calculateOptimal(self):
 		"""

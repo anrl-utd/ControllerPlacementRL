@@ -65,23 +65,26 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-
 	except KeyboardInterrupt: #Bug in Python multiprocessing, only Exceptions go through to main process
 		raise Exception
 
-def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
+def train_once(graph, clusters, pos, env_name='Controller-Select-v0', compute_optimal=True):
 	#Nudging environment
 	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
 	env.reset()
-	optimal_controllers = env.calculateOptimal()
+	optimal_controllers = None
+	if compute_optimal:
+		optimal_controllers = env.calculateOptimal()
+
 	# Generate custom replay buffer full of valid experiences to speed up exploration of training
 	def add_wrapper(replay_buffer):
 		# Replay buffer maxsize is by default 50000. Should this be lowered?
 		valid_controllers_set = [env._random_valid_controllers() for i in range(int(replay_buffer._maxsize * 0.5 / len(clusters)))]
 	
 		for valid_controllers in valid_controllers_set:
-			obs_current = env.reset()
+			obs_current = env.reset()  # Really strange issue - obs_current follows the change in env.state, making it equal to obs!
 			for controller in valid_controllers:
 				(obs, rew, done, _) = env.step(controller)
-				replay_buffer.add(obs_current, controller, rew, obs, done)
-				obs_current = obs
-		print(replay_buffer._storage[:5])
+				replay_buffer.add(obs_current, controller, rew, obs, done)  # For some reason, obs is a pointer which ends up being the very last obs before reset, so need to copy
+				obs_current = obs.copy()
+		print(replay_buffer._storage[:7])
 		return replay_buffer
 
 	#Agent
@@ -104,6 +107,8 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	# Show controllers chosen by the model
 	env.render()
 	print(env.controllers, reward_final)
+	print("BEST EVER:")
+	print(env.best_controllers, env.best_reward)
 
 	# Show controllers chosen using heuristic
 	env.reset()
@@ -114,12 +119,13 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0'):
 	print(env.controllers, reward_final)
 
 	#Show optimal
-	env.reset()
-	for cont in optimal_controllers[0]:
-		(_, reward_final, _, _) = env.step(cont)
-	env.render()
-	print(env.controllers, reward_final)
-	print(optimal_controllers)
+	if optimal_controllers is not None:
+		env.reset()
+		for cont in optimal_controllers[0]:
+			(_, reward_final, _, _) = env.step(cont)
+		env.render()
+		print(env.controllers, reward_final)
+		print(optimal_controllers)
 
 if __name__ == "__main__":
 	graph = None
@@ -133,7 +139,7 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(3, 45, draw=False)
+		graph, clusters, pos = generateGraph(6, 90, draw=False)
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
@@ -141,7 +147,7 @@ if __name__ == "__main__":
 		#I store the results in a SQLite database so that it can resume from checkpoints.
 		#study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
 		#study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters, pos), n_trials=500)
-		train_once(graph, clusters, pos)
+		train_once(graph, clusters, pos, compute_optimal=False)
 	except Exception as e:
 		print(e)
 		print('Interrupted, saving . . . ')
