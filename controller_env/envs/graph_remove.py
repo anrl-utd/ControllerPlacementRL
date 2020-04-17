@@ -15,6 +15,7 @@ import pprint
 from scipy.interpolate import interp1d
 from collections import defaultdict
 import heapq
+import time
 
 warnings.filterwarnings("ignore", category=UserWarning)
 random.seed(0)
@@ -480,7 +481,32 @@ class ControllerRemove(gym.Env):
                 lowestDistance = self.calculateDistance(actions + [node])
                 bestNode = node
         actions.append(bestNode)
-        return actions
+
+        t0 = time.time()
+        # Simulated Annealing Meta Heuristic
+        current_state = actions
+        annealing_rate = 0.90
+        for x in range(1000):
+            temperature = 1
+            randomCluster = np.random.randint(len(self.clusters))
+            randomBestAction = current_state[randomCluster]
+            neighborList = [v for k, v in self.graph.edges if k == randomBestAction and v in self.clusters[self.graph.nodes[randomBestAction]['cluster']]]
+            neighborList.append(randomBestAction)
+            randomNeighbor = np.random.choice(neighborList)
+            proposed_state = current_state.copy()
+            proposed_state[randomCluster] = randomNeighbor
+            threshold = float(np.random.rand(1))
+            proposed_distance = self.calculateDistance(proposed_state)
+            current_distance = self.calculateDistance(current_state)
+            probability = 1 if proposed_distance < current_distance else np.exp(-(proposed_distance - current_distance)/temperature)
+            if probability >= threshold:
+                current_state = proposed_state.copy()
+            temperature *= annealing_rate
+        t1 = time.time()
+        total_time = t1 - t0
+        # if self.calculateDistance(actions) < self.calculateDistance(current_state):
+        #     current_state = actions
+        return current_state, self.calculateDistance(current_state), actions, self.calculateDistance(actions), total_time
 
 
 def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_low=0, weight_high=100, draw=True):

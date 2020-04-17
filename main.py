@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import math
 import networkx as nx
 random.seed(3)
-from stable_baselines import PPO2
+# from stable_baselines import PPO2
 import optuna
 
 # def optimize_algorithm(trial):
@@ -50,68 +50,87 @@ import optuna
 # 	study = optuna.create_study(study_name='ppo_nudging', storage='sqlite:///params.db', load_if_exists=True)
 # 	study.optimize(optimize_algorithm, n_trials=1000)
 
-#Training without Optuna, so that we can compare the trained model to best possible controllers
+#Training without Optuna, so that we can compare the trained model to best possible contrllers
 if __name__ == "__main__":
 	num_correct = 0
-	for x in range(100, 200):
+	total_num = 0
+	best_times = []
+	optimal_times = []
+	for x in range(1, 100):
 		np.random.seed(x)
-		graph, clusters, bridge_nodes, pos = generateGraph(3, 18, draw=False)  # Generate graph
+		graph, clusters, bridge_nodes, pos = generateGraph(9, 180, draw=False)  # Generate graph
 		# Nudging environment
 		env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes=bridge_nodes, pos=pos)
-		best_action = env.best_action()
-		best_action.sort()
-		optimal_action = env.calculateOptimal()
-		print(env.findGraphCentroid())
-		print("Heuristic action:", best_action)
-		print("Optimal action:", list(optimal_action[0]))
-		print("Equal? : ", best_action == list(optimal_action[0]))
-		if best_action == list(optimal_action[0]):
-			num_correct+=1
-		else:
-			env.renderCentroid(best_action)
-			env.renderCentroid(optimal_action[0])
-		print(num_correct / (x-99))
-	graph, clusters, bridge_nodes, pos = generateGraph(4 , 24, draw=False)	#Generate graph
-	#Nudging environment
-	print(gym.envs.registry.all())
-	env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes = bridge_nodes, pos=pos)
+		print("Done")
+		t0 = time.time()
+		best_action, best_distance, best_action_not_SA, best_distance_not_SA, SA_time= env.best_action()
+		t1 = time.time()
+		best_action_time = t1-t0
+		# t0 = time.time()
+		# optimal_action = env.calculateOptimal()
+		# t1 = time.time()
+		# optimal_action_time = t1-t0
+		print("Best action is; ", best_action)
+		print("Time is ", best_action_time)
+		print("Best action distance is: ", best_distance)
+		print("the Simulated annealing time is: ", SA_time)
+		print("Best action (not SA) is:", best_action_not_SA)
+		print("Best action (not SA) distance is:", best_distance_not_SA)
+		# print("Algorithm action is:", optimal_action)
+		# print("Time is ", optimal_action_time)
+		best_times.append(best_action_time)
+		# optimal_times.append(optimal_action_time)
+		if best_distance < best_distance_not_SA:
+			num_correct += 1
+		total_num +=1
+	print("Improvement = :", num_correct / total_num)
 
-	print(env.findGraphCentroid())
-	# env.repeatBestAction()
-	# env.render()
-	# env.showSubgraph(1)
-	# env.minimumSpanningTree()
-	# env.render()
-	print("This is new propagation optimal")
-	t0 = time.time()
-
-	answer = env.calculateNewOptimal()
-	t1 = time.time()
-	print("Answer is:", answer)
-	print("The time was", t1-t0)
-	print("This is the new graph rendering!")
-	print(type(answer))
-	env.renderCentroid(answer)
-	print("This is path to centroid optimal")
-	t0 = time.time()
-	answer = env.best_action()
-	answer.sort()
-	t1 = time.time()
-	print("Answer is:", answer)
-	print("The time was", t1 - t0)
-
-	# env.calculateDistance(answer)
-	# print(env.calculateDistance([0, 5, 8]))
-	# print(env.calculateDistance([0, 3, 8]))
-	# print(env.calculateDistance([5, 31, 41]))
-	t0 = time.time()
-	print("For this class, the optimal is", env.calculateOptimal())
-	t1 = time.time()
-	print("The time this took was", t1-t0)\
-
-
-	# print("WIthoug changing graph", env.calculateDistance([3, 8, 12, 15, 21]))
-	env.reset()
+	# print("Best times are: " , best_times)
+	print("Optimal times are:", optimal_times)
+	# plt.plot(best_times)
+	# plt.plot(optimal_times)
+	# plt.show()
+	# graph, clusters, bridge_nodes, pos = generateGraph(4 , 24, draw=False)	#Generate graph
+	# #Nudging environment
+	# print(gym.envs.registry.all())
+	# env = gym.make('ControllerRemoveNodes-v0', graph=graph, clusters=clusters, bridge_nodes = bridge_nodes, pos=pos)
+	#
+	# print(env.findGraphCentroid())
+	# # env.repeatBestAction()
+	# # env.render()
+	# # env.showSubgraph(1)
+	# # env.minimumSpanningTree()
+	# # env.render()
+	# print("This is new propagation optimal")
+	# t0 = time.time()
+	#
+	# answer = env.calculateNewOptimal()
+	# t1 = time.time()
+	# print("Answer is:", answer)
+	# print("The time was", t1-t0)
+	# print("This is the new graph rendering!")
+	# print(type(answer))
+	# env.renderCentroid(answer)
+	# print("This is path to centroid optimal")
+	# t0 = time.time()
+	# answer = env.best_action()
+	# answer.sort()
+	# t1 = time.time()
+	# print("Answer is:", answer)
+	# print("The time was", t1 - t0)
+	#
+	# # env.calculateDistance(answer)
+	# # print(env.calculateDistance([0, 5, 8]))
+	# # print(env.calculateDistance([0, 3, 8]))
+	# # print(env.calculateDistance([5, 31, 41]))
+	# t0 = time.time()
+	# print("For this class, the optimal is", env.calculateOptimal())
+	# t1 = time.time()
+	# print("The time this took was", t1-t0)\
+	#
+	#
+	# # print("WIthoug changing graph", env.calculateDistance([3, 8, 12, 15, 21]))
+	# env.reset()
 	# for x in range(1000):
 	# 	env.recalculateBridgeWeight()
 	# 	# env.render()
