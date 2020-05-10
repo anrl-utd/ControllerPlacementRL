@@ -51,6 +51,10 @@ class ControllerSlowSelect(ControllerEnv):
 
 		# TODO: Speed up by using self.state == -1 to determine if the action is erroneous and just set reward of -10000 (no need to do controller setting)
 		(obs, rew, done, i) = (self.state.copy(), super().step(self.controllers), len(self.controllers) >= self.num_clusters, {})
+		"""
+		if rew >= 10000:
+			done = True
+		"""
 		if done:
 			if self.best_reward > rew:
 				self.best_controllers = self.controllers
@@ -67,6 +71,30 @@ class ControllerSlowSelect(ControllerEnv):
 		Override of the calculateOptimal() in the base environment class
 		"""
 		combinations = list(itertools.product(*self.clusters))
+		min_dist = 1000000
+		min_combination = None
+		for combination in combinations:
+			dist = super().step(combination)
+			if(dist < min_dist):
+				min_dist = dist
+				min_combination = combination
+		return (min_combination, min_dist)
+
+	def optimal_neighbors(self, graph, controllers : list):
+		# This isn't efficient and does not take advantage of other variables in the class
+		# TODO: Optimize to use cluster_info
+		clusters = nx.get_node_attributes(graph, 'cluster')
+		neighbors_list = []
+		for i in controllers:
+			cluster = []
+			cluster.append(i)
+			neighbors = graph.neighbors(i)
+			for neighbor in neighbors:
+				if(clusters[neighbor] == clusters[i]):
+					cluster.append(neighbor)
+			neighbors_list.append(cluster)
+		print(neighbors_list)
+		combinations = list(itertools.product(*neighbors_list))
 		min_dist = 1000000
 		min_combination = None
 		for combination in combinations:

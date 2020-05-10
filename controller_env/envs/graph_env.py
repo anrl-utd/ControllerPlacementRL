@@ -25,7 +25,7 @@ class ControllerEnv(gym.Env):
 		#self.observation_space = spaces.Box(np.zeros(shape=len(graph.nodes)), np.ones(shape=len(graph.nodes)), dtype=np.bool)
 		self.original_graph = graph.copy()
 		if(pos is None):
-			self.pos = nx.spring_layout(graph)   # get the positions of the nodes of the graph
+			self.pos = nx.kamada_kawai_layout(graph)   # get the positions of the nodes of the graph
 		else:
 			self.pos = pos
 		self.clusters = np.stack(clusters)
@@ -51,53 +51,49 @@ class ControllerEnv(gym.Env):
 		distance = 0
 		controller_graph = None
 		#Create metagraph of controllers. The node at an index corresponds to the controller of the cluster of that index
-		try:
-			controller_graph = self._set_controllers(action)
-			"""
-			Don't create packets, try having reward of total distance between all adjacent controllers
-
-			#Create "packets" with source, destination
-			packets = np.random.randint(low=0, high=len(self.graph.nodes), size=(num_packets, 2))
-			#Convert source and destination to cluster the source/destination is in
-			for i in range(packets.shape[0]):
-				if packets[i, 0] == packets[i, 1]:
-					continue
-				source_cluster = np.where(self.clusters == packets[i, 0])[0][0]
-				destination_cluster = np.where(self.clusters == packets[i, 1])[0][0]
-				distance += nx.dijkstra_path_length(controller_graph, source_cluster, destination_cluster)
-			"""
-		except AssertionError:
-			return 10000
+		controller_graph, bad_controllers = self._set_controllers(action)
 		#Return output reward
 		#return -distance
-		return controller_graph.size(weight='weight')
+		return controller_graph.size(weight='weight') + 100000 * bad_controllers
 
 	def reset(self):
 		"""Resets the environment to initial state"""
 		print("Reset environment")
 
-	def render(self, mode: str='human', close=False):
+	def render(self, mode: str='human', close=False, graph=None):
+		render_graph = None
+		if(graph is None):
+			render_graph = self.graph
+		else:
+			render_graph = graph
+
 		"""Renders the environment once"""
 		plt.clf()	# Clear the matplotlib figure
 
 		#Redraw the entire graph (this can only be expedited if we save the position and colors beforehand)
 		#Then we won't have to recalculate all this to draw. Maybe make them a global variable?
-		node_colors = np.arange(0, nx.number_of_nodes(self.graph), 1)
-		clustering = nx.get_node_attributes(self.graph, 'cluster')
+		node_colors = np.arange(0, nx.number_of_nodes(render_graph), 1)
+		clustering = nx.get_node_attributes(render_graph, 'cluster')
 		for node in clustering:
 			node_colors[node] = clustering[node]
-		node_sizes = np.ones((len(self.graph))) * 300
-		if self.controllers is not None:
-			node_sizes[self.controllers] = 1000
-		nx.draw_networkx_nodes(self.graph, self.pos, node_color=node_colors, node_size=node_sizes)
-		nx.draw_networkx_edges(self.graph, self.pos, self.graph.edges())        # draw the edges of the self.graph
-		nx.draw_networkx_labels(self.graph, self.pos)                      # draw  the labels of the self.graph
-		edge_labels = nx.get_edge_attributes(self.graph,'weight')
-		nx.draw_networkx_edge_labels(self.graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the self.graph
+		node_sizes = np.ones((len(render_graph))) * 300
+		try:
+			if self.current_controllers is not None:
+				node_sizes[self.current_controllers] = 1000
+		except Exception as e:
+			print("Invalid controllers provided to render()")
+		nx.draw_networkx_nodes(render_graph, self.pos, node_color=node_colors, node_size=node_sizes)
+		nx.draw_networkx_edges(render_graph, self.pos, render_graph.edges())        # draw the edges of the render_graph
+		nx.draw_networkx_labels(render_graph, self.pos)                      # draw  the labels of the render_graph
+		edge_labels = nx.get_edge_attributes(render_graph,'weight')
+		nx.draw_networkx_edge_labels(render_graph,self.pos,edge_labels=edge_labels) # draw the edge weights of the render_graph
 		plt.draw()
-		plt.show()
+		if mode is 'human':
+			plt.show()
+		else:
+			plt.savefig(mode, bbox_inches='tight')  # A little hacky, but a way to provide the save file name without creating a parameter
 
-	def _set_controllers(self, controllers: list):
+	def _set_controllers(self, controllers: list) -> (nx.Graph, int):
 		"""Creates metagraph of controllers
 		Args:
 			controllers: Array of controller indices
@@ -113,25 +109,30 @@ class ControllerEnv(gym.Env):
 		found_clusters = np.zeros((len(self.clusters)))	#Stores what clusters have controllers been found for
 		clusters = nx.get_node_attributes(self.graph, 'cluster')
 		index = 0
+		num_erroneous = 0
+		valid_controllers = []
 		for controller in controllers:
 			#Multiple controllers in a cluster
-			assert(found_clusters[clusters[controller]] == 0)
-			found_clusters[clusters[controller]] = 1
-		
+			if found_clusters[clusters[controller]] == 0:
+				found_clusters[clusters[controller]] = 1
+				valid_controllers.append(controller)
+			else:
+				num_erroneous += 1  # This computation could be removed, but eh I like it [Usaid]
+
 		#Controllers were found to be valid. Now add controllers to complete metagraph.
 		#TODO: Optimize this, new_contr_indices and mapping can be reduced to a single variable (and possible a single line for the for)
 		new_contr_indices = []
 		#mapping = defaultdict(list)
-		for i in range(len(controllers)):
-			new_contr_indices.append([i, controllers[i]])
+		for i in range(len(valid_controllers)):
+			new_contr_indices.append([i, valid_controllers[i]])
 			#mapping[i] = controllers[i]
 		controller_graph = nx.complete_graph(len(new_contr_indices))	#Store controller metagraph
 		
 		for pair in itertools.combinations(new_contr_indices, 2):
 			controller_graph.add_edge(pair[0][0], pair[1][0], weight=nx.dijkstra_path_length(self.graph, source=pair[0][1], target=pair[1][1]))
 
-		self.current_controllers = controllers
-		return controller_graph
+		self.current_controllers = valid_controllers.copy()
+		return (controller_graph, num_erroneous)
 
 	def _graph_degree(self):
 		"""Returns the highest degree of a node in the graph"""
@@ -240,15 +241,19 @@ def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, pr
 	#Create clusters and add random edges within each cluster before merging them into single graph
 	for i in range(num_clusters):
 		#Add tree to serve as base of cluster subgraph. Loop through all edges and assign weights to each
-		cluster = nx.random_tree(nodes_per_cluster)
+		# cluster = nx.random_tree(nodes_per_cluster)
+		p = 0.1  # TODO: Move to constants
+		cluster = nx.fast_gnp_random_graph(nodes_per_cluster, p)
+		while(not nx.is_connected(cluster)):
+			cluster = nx.fast_gnp_random_graph(nodes_per_cluster, p)
 		for start, end in cluster.edges:
-			cluster.add_edge(start, end, weight=random.randint(weight_low, weight_high))
+			cluster.add_edge(start, end, weight=50) #random.randint(weight_low, weight_high))
 
 		#Add edges to increase connectivity of cluster
-		new_edges = np.random.randint(0, nodes_per_cluster, (int(nodes_per_cluster * prob_cluster), 2))
-		new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
-		new_edges = np.append(new_edges, new_weights, 1)
-		cluster.add_weighted_edges_from(new_edges)
+		# new_edges = np.random.randint(0, nodes_per_cluster, (int(nodes_per_cluster * prob_cluster), 2))
+		# new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
+		# new_edges = np.append(new_edges, new_weights, 1)
+		# cluster.add_weighted_edges_from(new_edges)
 
 		#Set attributes and colors
 		nx.set_node_attributes(cluster, i, 'cluster')
@@ -260,17 +265,20 @@ def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, pr
 		#Merge cluster with main graph
 		G = nx.disjoint_union(G, cluster)
 
-	#Add an edge to connect all clusters (to gurantee it is connected)
-	node_num = 0
-	for i in range(num_clusters - 1):
-		G.add_edge(node_num, node_num + nodes_per_cluster, weight=random.randint(weight_low, weight_high))
+	# Add an edge to connect all clusters (to gurantee it is connected)
+	node_num = nodes_per_cluster - 1 + nodes_per_cluster
+	edge_weight = 1000
+	G.add_edge(nodes_per_cluster - 1, nodes_per_cluster, weight=10000)
+	for i in range(num_clusters - 1 - 1):
+		G.add_edge(node_num, node_num + 1, weight=50)#random.randint(weight_low, weight_high))
 		node_num += nodes_per_cluster
+		edge_weight = int(1000 * pow(0.2, i))
 
-	#Add random edges to any nodes to increase diversity
-	#new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.1), 2))
-	#new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
-	#new_edges = np.append(new_edges, new_weights, 1)
-	#G.add_weighted_edges_from(new_edges)
+	# Add random edges to any nodes to increase diversity
+	# new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.1), 2))
+	# new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
+	# new_edges = np.append(new_edges, new_weights, 1)
+	# G.add_weighted_edges_from(new_edges)
 	G.remove_edges_from(nx.selfloop_edges(G)) #Remove self-loops caused by adding random edges
 
 	#Draw graph

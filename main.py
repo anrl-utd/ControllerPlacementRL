@@ -69,8 +69,11 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0', compute_op
 	#Nudging environment
 	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
 	env.reset()
+	env.render()
+	env.render(mode='original_graph.png')
 	optimal_controllers = None
 	if compute_optimal:
+		print("Computing optimal!")
 		optimal_controllers = env.calculateOptimal()
 
 	# Generate custom replay buffer full of valid experiences to speed up exploration of training
@@ -88,8 +91,9 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0', compute_op
 		return replay_buffer
 
 	#Agent
-	model = DQN(MlpPolicy, env, tensorboard_log='train_log', verbose=0, exploration_initial_eps=0.1, exploration_fraction=0.05, learning_starts=0, target_network_update_freq=100)
+	model = DQN(MlpPolicy, env, tensorboard_log='train_log_watts', verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32)
 	# Train the agent
+	print("Training!")
 	model.learn(total_timesteps=int(1e6), replay_wrapper=add_wrapper)
 
 	# Run a single run to evaluate the DQN
@@ -105,25 +109,27 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0', compute_op
 		reward_final = rew
 	
 	# Show controllers chosen by the model
-	env.render()
+	env.render(mode='graph_end.png')
 	print(env.controllers, reward_final)
 	print("BEST EVER:")
 	print(env.best_controllers, env.best_reward)
+	print(env.optimal_neighbors(graph, env.best_controllers))
 
 	# Show controllers chosen using heuristic
 	env.reset()
 	centroid_controllers = env.graphCentroidAction()
 	for cont in centroid_controllers:
 		(_, reward_final, _, _) = env.step(cont)
-	env.render()
+	env.render(mode='graph_heuristic.png')
 	print(env.controllers, reward_final)
+	print(env.optimal_neighbors(graph,  env.controllers))
 
 	#Show optimal
 	if optimal_controllers is not None:
 		env.reset()
 		for cont in optimal_controllers[0]:
 			(_, reward_final, _, _) = env.step(cont)
-		env.render()
+		env.render(mode='graph_optimal.png')
 		print(env.controllers, reward_final)
 		print(optimal_controllers)
 
@@ -143,6 +149,7 @@ if __name__ == "__main__":
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
+	
 	try:
 		#I store the results in a SQLite database so that it can resume from checkpoints.
 		#study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
@@ -154,6 +161,7 @@ if __name__ == "__main__":
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
+	
 
 #DQN trials: DQN_15 for DQN_3C_45N_Replay_1, DQN_18 for DQN_3C_45N_NoReplay_1
 

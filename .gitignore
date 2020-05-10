@@ -472,3 +472,7 @@ MigrationBackup/
 /GraphNets
 /graphnets_testing.py
 /train_log_old
+/train_log_watts
+/graph_end.png
+/graph_heuristic.png
+/original_graph.png
