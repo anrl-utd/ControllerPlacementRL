@@ -52,8 +52,8 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-
 		trial.report(-reward)
 
 		if(reward >= 100000):
-			#Since I am unsure if Optuna does multiprocessing, I'm going to search the logging path for the last-logged
-			#and delete it if it isn't relevant
+			# Since I am unsure if Optuna does multiprocessing, I'm going to search the logging path for the last-logged
+			# and delete it if it isn't relevant
 			path = os.path.abspath(os.getcwd()) + '/train_log'
 			list_subfolders_with_paths = [f.path for f in os.scandir(path) if f.is_dir()]
 			paths = [int(f.split('/')[-1].split('_')[-1]) for f in list_subfolders_with_paths] #Can combine with previous line, but wanted readability
@@ -66,7 +66,7 @@ def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-
 		raise Exception
 
 def train_once(graph, clusters, pos, env_name='Controller-Select-v0', compute_optimal=True):
-	#Nudging environment
+	# Nudging environment
 	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
 	env.reset()
 	env.render()
@@ -91,10 +91,10 @@ def train_once(graph, clusters, pos, env_name='Controller-Select-v0', compute_op
 		return replay_buffer
 
 	#Agent
-	model = DQN(MlpPolicy, env, tensorboard_log='train_log_watts', verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32)
+	model = DQN(MlpPolicy, env, tensorboard_log='train_log_watts', verbose=1, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32)
 	# Train the agent
 	print("Training!")
-	model.learn(total_timesteps=int(1e6), replay_wrapper=add_wrapper)
+	model.learn(total_timesteps=int(2e6), replay_wrapper=add_wrapper)
 
 	# Run a single run to evaluate the DQN
 	obs = env.reset()
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(6, 90, draw=False)
+		graph, clusters, pos = generateGraph(6, 90, draw=False, weight_low=1, weight_high=3)
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))

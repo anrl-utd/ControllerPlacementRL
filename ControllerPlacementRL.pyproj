@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{0870683f-08f9-4644-a020-5e7cfdb724bb}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>main.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>{3ee1e783-e61e-45ff-98c0-9bffde1fedbb}</InterpreterId>
+    <InterpreterVersion>3.5</InterpreterVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="path.png" />
+    <Content Include="requirements.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="controller_env\envs\graph_direct.py" />
+    <Compile Include="controller_env\envs\graph_env.py" />
+    <Compile Include="controller_env\envs\graph_nudge.py" />
+    <Compile Include="controller_env\envs\graph_select.py" />
+    <Compile Include="controller_env\envs\__init__.py" />
+    <Compile Include="controller_env\__init__.py" />
+    <Compile Include="graph_policy.py" />
+    <Compile Include="main.py" />
+    <Compile Include="setup.py" />
+    <Compile Include="test_graph.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="controller_env" />
+    <Folder Include="controller_env\envs" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{3ee1e783-e61e-45ff-98c0-9bffde1fedbb}\3.5" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>

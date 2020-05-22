@@ -15,8 +15,8 @@ __pycache__/
 *.db
 
 #Pickle files
-*.gpickle
-*.pickle
+position_*.pickle
+cluster*.pickle
 
 # Distribution / packaging
 .Python
