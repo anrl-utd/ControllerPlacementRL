@@ -476,3 +476,11 @@ MigrationBackup/
 /graph_end.png
 /graph_heuristic.png
 /original_graph.png
+/train_log_compare
+/position.pickle
+/graph_success4.gpickle
+/graph_success3.gpickle
+/graph_fail2.gpickle
+/graph.gpickle
+/ckpt_model.zip
+/AttMpls.graphml

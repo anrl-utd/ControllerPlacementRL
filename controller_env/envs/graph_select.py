@@ -16,13 +16,13 @@ class ControllerSlowSelect(ControllerEnv):
 		"""Initilizes environment and assigns random nodes to be controllers"""
 		super().__init__(graph, clusters, pos, check_controller_num=False)
 		self.action_space = spaces.Discrete(len(graph.nodes))
-		#self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
+		# self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
 		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = []
 		self.best_controllers = []
 		self.best_reward = 100000
 
-		self.num_clusters = clusters.shape[0]
+		self.num_clusters = len(clusters)
 		print(self.num_clusters)
 
 		# Created to speed up getting cluster info since graph is static
@@ -62,13 +62,17 @@ class ControllerSlowSelect(ControllerEnv):
 		return (obs, -rew, done, i)
 
 	def reset(self):
+		"""Resets environment"""
 		self.controllers = []
 		self.state = np.zeros(shape=len(self.graph.nodes))
 		return self.state.copy()
 
-	def calculateOptimal(self):
+	def calculateOptimal(self) -> (list, int):
 		"""
 		Override of the calculateOptimal() in the base environment class
+		Returns:
+			Best combination of controllers
+			Total distance between return controllers
 		"""
 		combinations = list(itertools.product(*self.clusters))
 		min_dist = 1000000
@@ -80,7 +84,16 @@ class ControllerSlowSelect(ControllerEnv):
 				min_combination = combination
 		return (min_combination, min_dist)
 
-	def optimal_neighbors(self, graph, controllers : list):
+	def optimal_neighbors(self, graph, controllers : list) -> (list, int):
+		"""
+		Gets best set of controllers from neighbors of provided set of nodes
+		Args:
+			graph (nx.Graph): NetworkX graph to use
+			controllers: List of node numbers as controllers
+		Returns:
+			Best combination of controllers
+			Total distance between return controllers
+		"""
 		# This isn't efficient and does not take advantage of other variables in the class
 		# TODO: Optimize to use cluster_info
 		clusters = nx.get_node_attributes(graph, 'cluster')
@@ -94,6 +107,7 @@ class ControllerSlowSelect(ControllerEnv):
 					cluster.append(neighbor)
 			neighbors_list.append(cluster)
 		print(neighbors_list)
+		# Find best controller set from neighbors
 		combinations = list(itertools.product(*neighbors_list))
 		min_dist = 1000000
 		min_combination = None
