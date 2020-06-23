@@ -1,6 +1,8 @@
 """
 Main code to create graph and run agent
 Author: Usaid Malik
+
+TODO: Upload code to Colab, fix weight distance issue when generating random graphs, make Optuna great again
 """
 import os
 os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # Necessary to supress Fortran overwriting keyboard interrupt (don't ask me why, idk but it works)
@@ -12,6 +14,7 @@ import random
 import matplotlib.pyplot as plt
 import math
 import networkx as nx
+import traceback
 
 from stable_baselines import PPO1, DQN
 from stable_baselines.deepq.policies import MlpPolicy, LnMlpPolicy
@@ -104,14 +107,17 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	# Agent
 	model = None
 	if trained_model is None:
+		print("Creating new training model!")
 		model = DQN(LnMlpPolicy, env, tensorboard_log='train_log_compare', verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32, seed=100)
 	else:
+		print("Using provided training model!")
 		model = trained_model
 		model.set_env(env)
+		model.tensorboard_log = 'train_log_compare'
 
 	# Train the agent
 	print("Training!")
-	model.learn(total_timesteps=int(steps), replay_wrapper=add_wrapper)
+	model.learn(total_timesteps=int(steps))#, replay_wrapper=add_wrapper)
 
 	# Run a single run to evaluate the DQN
 	obs = env.reset()
@@ -164,7 +170,15 @@ if __name__ == "__main__":
 		graph = nx.read_gpickle('graph.gpickle')
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateGraph(6, 90, draw=False, weight_low=1, weight_high=10)
+		#graph, clusters, pos = generateGraph(6, 90, draw=False, weight_low=1, weight_high=10)
+		clusters = []
+		graph = None
+		pos = None
+		while len(clusters) < 8:
+			k_graph = nx.fast_gnp_random_graph(180, 0.05)
+			while(not nx.is_connected(k_graph)):
+				k_graph = nx.fast_gnp_random_graph(180, 0.05)
+			graph, clusters, pos = generateClusters(k_graph)
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
@@ -174,26 +188,20 @@ if __name__ == "__main__":
 		# study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
 		# study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters, pos), n_trials=500)
 		print("FIRST RUN:")
-		old_model = DQN.load('ckpt_model')
-		clusters = []
-		graph = None
-		pos = None
-		while len(clusters) != 6:
-			k_graph = nx.fast_gnp_random_graph(90, 0.05)
-			while(not nx.is_connected(k_graph)):
-				k_graph = nx.fast_gnp_random_graph(90, 0.05)
-			graph, clusters, pos = generateClusters(k_graph)
-		print("Generated 6-cluster graph!")
-		train_once(graph, clusters, pos, compute_optimal=False, trained_model=old_model)
-		print("SECOND RUN:")
+		# old_model = DQN.load('ckpt_model')
+		k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
+		# Use LinkSpeed (unit GB/s) edge attribute as weight
+		edge_dict = nx.get_edge_attributes(k_graph, 'LinkSpeed')
+		new_edges = { key: float(value) for key, value in edge_dict.items() }
+		nx.set_edge_attributes(k_graph, new_edges, 'weight')
+		graph, clusters, pos = generateClusters(k_graph)
+		print("Generated {}-cluster graph!".format(len(clusters)))
 		train_once(graph, clusters, pos, compute_optimal=False)
-		# print("SECOND RUN:")
-		# new_graph, new_clusters, new_pos = generateAlternateGraph(6, 90, draw=False, weight_low=1, weight_high=10)
-		# train_once(new_graph, new_clusters, new_pos, compute_optimal=False, trained_model=old_model, steps=4e5)
-		# print("TESTING FROM SCRATCH:")
-		# train_once(new_graph, new_clusters, new_pos, compute_optimal=False, steps=4e5)
+		#print("SECOND RUN:")
+		#train_once(graph, clusters, pos, compute_optimal=False, trained_model=old_model)
 	except Exception as e:
 		print(e)
+		traceback.print_exc()
 		print('Interrupted, saving . . . ')
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))

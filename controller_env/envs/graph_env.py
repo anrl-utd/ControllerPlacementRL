@@ -96,7 +96,7 @@ class ControllerEnv(gym.Env):
 		node_colors = np.arange(0, nx.number_of_nodes(render_graph), 1)  # Stores colors in every node
 		clustering = nx.get_node_attributes(render_graph, 'cluster')
 		for node in clustering:
-			node_colors[node] = clustering[node]
+			node_colors[int(node)] = clustering[node]
 		node_sizes = np.ones((len(render_graph))) * 300  # 300 is not-controller node size
 		# Set controller nodes to larger size
 		try:
@@ -137,6 +137,7 @@ class ControllerEnv(gym.Env):
 		valid_controllers = []
 		for controller in controllers:
 			#Multiple controllers in a cluster
+			controller = str(controller)  # Just for the GraphML files, remove for generated graphs
 			if found_clusters[clusters[controller]] == 0:
 				found_clusters[clusters[controller]] = 1
 				valid_controllers.append(controller)
