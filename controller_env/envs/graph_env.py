@@ -440,5 +440,7 @@ def generateClusters(graph: nx.Graph) -> (nx.Graph, list, dict):
 			node_attrs[node] = {'cluster' : i }
 	new_graph = graph
 	nx.set_node_attributes(new_graph, node_attrs)
+	for (u, v) in new_graph.edges():
+		new_graph.edges[u,v]['weight'] = random.randint(0,10)
 	print(clusters)
 	return new_graph, clusters, nx.kamada_kawai_layout(new_graph)
