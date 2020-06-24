@@ -137,7 +137,7 @@ class ControllerEnv(gym.Env):
 		valid_controllers = []
 		for controller in controllers:
 			#Multiple controllers in a cluster
-			controller = str(controller)  # Just for the GraphML files, remove for generated graphs
+			# controller = str(controller)  # Just for the GraphML files, remove for generated graphs
 			if found_clusters[clusters[controller]] == 0:
 				found_clusters[clusters[controller]] = 1
 				valid_controllers.append(controller)
