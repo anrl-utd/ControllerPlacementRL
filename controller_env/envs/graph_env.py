@@ -42,6 +42,9 @@ class ControllerEnv(gym.Env):
 		self.degree = self._graph_degree()
 		self.check_controller_num = check_controller_num
 		self.current_controllers = None  # Stores controllers placed in last action (used for rendering)
+		self.adjacent_clusters = self._get_adjacent_clusters()
+		print("Cluster adjacency matrix:")
+		print(self.adjacent_clusters)
 		print("Initialized environment!")
 
 	def step(self, action: list) -> int:
@@ -144,18 +147,16 @@ class ControllerEnv(gym.Env):
 			else:
 				num_erroneous += 1  # This computation could be removed, but eh I like it [Usaid]
 
-		# Controllers were found to be valid. Now add controllers to complete metagraph.
-		# TODO: Optimize this, new_contr_indices and mapping can be reduced to a single variable (and possible a single line for the for)
-		new_contr_indices = []
-		# mapping = defaultdict(list)
-		for i in range(len(valid_controllers)):
-			new_contr_indices.append([i, valid_controllers[i]])
-			# mapping[i] = controllers[i]
-		controller_graph = nx.complete_graph(len(new_contr_indices))  # Store controller metagraph
-		
+		# Controllers were found to be valid. Now add controllers to metagraph.
+		controller_graph = nx.Graph()  # Store controller metagraph
+		controller_graph.add_nodes_from(range(len(valid_controllers)))
 		# Add edges between controllers in metagraph
-		for pair in itertools.combinations(new_contr_indices, 2):
-			controller_graph.add_edge(pair[0][0], pair[1][0], weight=nx.dijkstra_path_length(self.graph, source=pair[0][1], target=pair[1][1]))
+		for pair in itertools.combinations(valid_controllers, 2):
+			first_cluster = clusters[pair[0]]
+			second_cluster = clusters[pair[1]]
+			assert first_cluster != second_cluster, "2 controllers in same cluster in _set_controllers {} {}".format(first_cluster, second_cluster)
+			if self.adjacent_clusters[first_cluster][second_cluster] == 1:
+				controller_graph.add_edge(first_cluster, second_cluster, weight=nx.dijkstra_path_length(self.graph, source=pair[0], target=pair[1]))
 
 		self.current_controllers = valid_controllers.copy()
 		return (controller_graph, num_erroneous)
@@ -172,6 +173,22 @@ class ControllerEnv(gym.Env):
 			cluster_controller = np.random.choice(cluster_arr[cluster_arr[:, 1] == cluster][:, 0]) #Select all nodes of a cluster then choose one randomly
 			controller_indices.append(cluster_controller)
 		return controller_indices
+	
+	def _get_adjacent_clusters(self):
+		"""
+		Gets which clusters are adjacent by iterating through all edges
+		Returns Numpy adjacency matrix of clusters
+		"""
+		adjacency_matrix = np.zeros(shape=(len(self.clusters), len(self.clusters)), dtype=int)
+		graph_nodes = dict(self.graph.nodes(data='cluster'))
+		for edge in self.graph.edges():
+			# edge is (u, v) where u and v are node IDs
+			node_1 = self.graph.nodes[edge[0]]['id']
+			node_2 = self.graph.nodes[edge[1]]['id']
+			if graph_nodes[node_1] != graph_nodes[node_2]:
+				adjacency_matrix[graph_nodes[node_1], graph_nodes[node_2]] = 1
+				adjacency_matrix[graph_nodes[node_2], graph_nodes[node_1]]  = 1
+		return adjacency_matrix
 
 	def stepLA(self, graph: nx.Graph, controllers: list) -> int:
 		"""
@@ -420,11 +437,12 @@ def generateAlternateGraph(num_clusters: int, num_nodes: int, prob_cluster: floa
 		plt.show()
 	return G, clusters, pos
 
-def generateClusters(graph: nx.Graph) -> (nx.Graph, list, dict):
+def generateClusters(graph: nx.Graph, edge_label: str=None) -> (nx.Graph, list, dict):
 	"""
 	Converts a normal NetworkX graph into a controller-placement graph by adding cluster attributes
 	Args:
 		graph (nx.Graph): NetworkX graph to convert to controller-placement graph with clusters
+		edge_label (str): Optional edge attribute label of original graph to use as edge weights instead of random
 	Returns:
 		NetworkX graph with 'cluster' node attribute
 		List of lists of nodes in clusters
@@ -432,15 +450,24 @@ def generateClusters(graph: nx.Graph) -> (nx.Graph, list, dict):
 	"""
 	# Uses Clauset-Newman-Moore greedy modularity maximization algorithm to partition nodes into communities
 	# it does not consider edge weights, sadly
-	clusters = list(nx.algorithms.community.greedy_modularity_communities(graph))
+	new_graph = nx.relabel.convert_node_labels_to_integers(graph)  # Converts node IDs to ints in case they weren't before
+	clusters = list(nx.algorithms.community.greedy_modularity_communities(new_graph))
+	# Add cluster attribute
 	node_attrs = {}
 	for i in range(len(clusters)):
 		node_list = clusters[i]
 		for node in node_list:
 			node_attrs[node] = {'cluster' : i }
-	new_graph = graph
 	nx.set_node_attributes(new_graph, node_attrs)
-	for (u, v) in new_graph.edges():
-		new_graph.edges[u,v]['weight'] = random.randint(0,10)
-	print(clusters)
+
+	# Set random edge weights if no edge label is set
+	if edge_label is None:
+		for (u, v) in new_graph.edges():
+			new_graph.edges[u,v]['weight'] = random.randint(0,10)
+	else:
+		# Use LinkSpeed (unit GB/s) edge attribute as weight
+		edge_dict = nx.get_edge_attributes(new_graph, edge_label)
+		new_edges = { key: float(value) for key, value in edge_dict.items() }
+		nx.set_edge_attributes(new_graph, new_edges, 'weight')
+
 	return new_graph, clusters, nx.kamada_kawai_layout(new_graph)

@@ -2,7 +2,7 @@
 Main code to create graph and run agent
 Author: Usaid Malik
 
-TODO: Upload code to Colab, fix weight distance issue when generating random graphs, make Optuna great again
+TODO: Make Optuna great again
 """
 import os
 os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # Necessary to supress Fortran overwriting keyboard interrupt (don't ask me why, idk but it works)
@@ -19,55 +19,10 @@ import traceback
 from stable_baselines import PPO1, DQN
 from stable_baselines.deepq.policies import MlpPolicy, LnMlpPolicy
 from stable_baselines.deepq.replay_buffer import ReplayBuffer  # PrioritizedReplayBuffer vs ReplayBuffer, what is the difference?
-import optuna
 import shutil
 import pickle
 import sys
 import signal
-
-def optimize_algorithm(trial, graph, clusters, pos, env_name='Controller-Select-v0'):
-	"""Not being used. Optimizes an algorithm using Optuna (tries out different parameters)"""
-	#TODO: Ensure early pruning of trials occurs to speed up optimization (Tensorflow hook?)
-	try:
-		model_params = {
-			#'gamma': trial.suggest_loguniform('gamma', 0.9, 0.999),
-			'entcoeff': trial.suggest_loguniform('entcoeff', 0.01, 0.1),
-			'lam': trial.suggest_uniform('lam', 0.9, 1),
-			'clip_param': trial.suggest_uniform('clip', 0.1, 0.4)
-		}
-
-		#Nudging environment
-		env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
-		#Agent
-		model = PPO1('MlpPolicy', env, tensorboard_log='train_log', verbose=0, **model_params)
-		# Train the agent
-		model.learn(total_timesteps=int(1e4))
-
-		loops = 0
-		obs = env.reset()
-		reward = 0 #We want the last reward to be minimal (perhaps instead do cumulative?)
-		done = False
-		while not done:
-			action, states = model.predict(obs)
-			(obs, rew, done, _) = env.step(action)
-			reward += rew
-			loops += 1
-		print(np.argwhere(obs))
-		trial.report(-reward)
-
-		if(reward >= 100000):
-			# Since I am unsure if Optuna does multiprocessing, I'm going to search the logging path for the last-logged
-			# and delete it if it isn't relevant
-			path = os.path.abspath(os.getcwd()) + '/train_log'
-			list_subfolders_with_paths = [f.path for f in os.scandir(path) if f.is_dir()]
-			paths = [int(f.split('/')[-1].split('_')[-1]) for f in list_subfolders_with_paths] #Can combine with previous line, but wanted readability
-			try:
-				shutil.rmtree(path + '/PPO1_' + str(sorted(paths)[-1]))
-			except OSError as e:
-				print("Error removing log file")
-		return -reward #Optuna by default minimizes, so changing this to positive distance
-	except KeyboardInterrupt: #Bug in Python multiprocessing, only Exceptions go through to main process
-		raise Exception
 
 def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Controller-Select-v0', compute_optimal: bool=True, trained_model: DQN=None, steps: int=2e5) -> DQN:
 	"""
@@ -184,21 +139,12 @@ if __name__ == "__main__":
 		pickle.dump(pos, open('position.pickle', 'wb'))
 	
 	try:
-		# I store the results in a SQLite database so that it can resume from checkpoints.
-		# study = optuna.create_study(study_name='ppo_direct', storage='sqlite:///params_select.db', load_if_exists=True)
-		# study.optimize(lambda trial: optimize_algorithm(trial, graph, clusters, pos), n_trials=500)
-		print("FIRST RUN:")
-		# old_model = DQN.load('ckpt_model')
+		# Get TopologyZoo graph to train on, using edge label LinkSpeed for edge weight
 		k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
-		# Use LinkSpeed (unit GB/s) edge attribute as weight
-		edge_dict = nx.get_edge_attributes(k_graph, 'LinkSpeed')
-		new_edges = { key: float(value) for key, value in edge_dict.items() }
-		nx.set_edge_attributes(k_graph, new_edges, 'weight')
-		graph, clusters, pos = generateClusters(k_graph)
+		# Randomly-generate clusters
+		graph, clusters, pos = generateClusters(k_graph, edge_label='LinkSpeed')
 		print("Generated {}-cluster graph!".format(len(clusters)))
-		train_once(graph, clusters, pos, compute_optimal=False)
-		#print("SECOND RUN:")
-		#train_once(graph, clusters, pos, compute_optimal=False, trained_model=old_model)
+		train_once(graph, clusters, pos, compute_optimal=False)  # Train
 	except Exception as e:
 		print(e)
 		traceback.print_exc()
