@@ -183,8 +183,10 @@ class ControllerEnv(gym.Env):
 		graph_nodes = dict(self.graph.nodes(data='cluster'))
 		for edge in self.graph.edges():
 			# edge is (u, v) where u and v are node IDs
-			node_1 = self.graph.nodes[edge[0]]['id']
-			node_2 = self.graph.nodes[edge[1]]['id']
+			#node_1 = self.graph.nodes[edge[0]]['id']
+			#node_2 = self.graph.nodes[edge[1]]['id']
+			node_1 = edge[0]
+			node_2 = edge[1]
 			if graph_nodes[node_1] != graph_nodes[node_2]:
 				adjacency_matrix[graph_nodes[node_1], graph_nodes[node_2]] = 1
 				adjacency_matrix[graph_nodes[node_2], graph_nodes[node_1]]  = 1
@@ -356,85 +358,99 @@ def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, pr
 	return G, clusters, pos
 
 
-def generateAlternateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, prob: float=0.2, weight_low: int=0, weight_high: int=100, draw=True) -> (nx.Graph, list, dict):
+def generateAlternateGraph(num_clusters: int, num_nodes: int, weight_low: int = 0, weight_high: int = 100,
+						   draw=True) -> (nx.Graph, list, dict):
 	"""
 	Generates graph given number of clusters and nodes
 	Args:
 		num_clusters: Number of clusters
 		num_nodes: Number of nodes
-		prob_cluster: Probability of adding edge between any two nodes within a cluster
-		prob: Probability of adding edge between any two nodes
 		weight_low: Lowest possible weight for edge in graph
 		weight_high: Highest possible weight for edge in graph
 		draw: Whether or not to show graph (True indicates to show)
-	
+
 	Returns:
 		Graph with nodes in clusters, array of clusters, graph position for drawing
 	"""
-	node_colors = np.arange(0, num_nodes, 1, np.uint8) #Stores color of nodes
-	G = nx.Graph()
-	node_num = 0
+	node_colors = np.arange(0, num_nodes, 1, np.uint8)  # Stores color of nodes
 	nodes_per_cluster = int(num_nodes / num_clusters)
-	clusters = np.zeros((num_clusters, nodes_per_cluster), np.uint8) #Stores nodes in each cluster
+	clusters = np.zeros((num_clusters, nodes_per_cluster), np.uint8)  # Stores nodes in each cluster
+	node_colors = node_colors // nodes_per_cluster  # Groups the node_colors
+	G = nx.Graph()
 
-	# Test having first cluster have a huge weight
-	first = False
+	cluster_endpoints = []
+	cluster = nx.full_rary_tree(int(np.log2(nodes_per_cluster)), nodes_per_cluster)
+	temp = 0  # variable used to ensure diameter is as small as possible
+	while nx.diameter(cluster) > (np.log2(nodes_per_cluster) + temp):
+		cluster = nx.full_rary_tree(int(np.log2(nodes_per_cluster)), nodes_per_cluster)
+		temp += 1
+	nx.set_node_attributes(cluster, 0, 'cluster')
+	clusters[0, :] = np.asarray(cluster.nodes)
 
-	#Create clusters and add random edges within each cluster before merging them into single graph
-	for i in range(num_clusters):
-		#Add tree to serve as base of cluster subgraph. Loop through all edges and assign weights to each
-		# cluster = nx.random_tree(nodes_per_cluster)
-		p = 0.1  # TODO: Move to constants
-		cluster = nx.fast_gnp_random_graph(nodes_per_cluster, p)
-		while(not nx.is_connected(cluster)):
-			cluster = nx.fast_gnp_random_graph(nodes_per_cluster, p)
-		for start, end in cluster.edges:
-			if first:
-				cluster.add_edge(start, end, weight=1000)
-			else:
-				cluster.add_edge(start, end, weight=random.randint(weight_low, weight_high))
-		first = False
+	inner_cluster_edges = np.random.randint(0, nodes_per_cluster,
+											(int(np.log2(nodes_per_cluster)), 2))
+	cluster.add_edges_from(inner_cluster_edges)
 
-		#Add edges to increase connectivity of cluster
-		new_edges = np.random.randint(0, nodes_per_cluster, (int(nodes_per_cluster * prob_cluster), 2))
-		new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
-		new_edges = np.append(new_edges, new_weights, 1)
-		cluster.add_weighted_edges_from(new_edges)
+	G = nx.disjoint_union(G, cluster)
+	for i in range(1, num_clusters):
+		cluster = nx.full_rary_tree(int(np.log2(nodes_per_cluster)), nodes_per_cluster)
+		temp = 0
+		while nx.diameter(cluster) > (np.log2(nodes_per_cluster) + temp):
+			cluster = nx.full_rary_tree(int(np.log2(nodes_per_cluster)), nodes_per_cluster)
+			temp += 1
 
-		#Set attributes and colors
 		nx.set_node_attributes(cluster, i, 'cluster')
-		node_colors[node_num:(node_num + nodes_per_cluster)] = i
-		node_num += nodes_per_cluster
 		clusters[i, :] = np.asarray(cluster.nodes) + nodes_per_cluster * i
-
-		#Merge cluster with main graph
 		G = nx.disjoint_union(G, cluster)
+		cluster_endpoint = np.random.randint(0, nodes_per_cluster)
+		cluster_endpoints.append(cluster_endpoint)
+		G.add_edge(cluster_endpoint, np.random.randint(nodes_per_cluster * i, nodes_per_cluster * i + i))
 
-    # Add random edges to any nodes to increase diversity
-	# new_edges = np.random.randint(0, num_nodes, (int(num_nodes * 0.5), 2))
-	# new_weights = np.random.randint(weight_low, weight_high, (new_edges.shape[0], 1))
-	# new_edges = np.append(new_edges, new_weights, 1)
-	# G.add_weighted_edges_from(new_edges)
+	# adding inter and inner edges of the clusters
+	closest_length = 1000
+	nearest_cluster = 0
+	shortest_path = 0
+	for i in range(1, num_clusters):
+		# check for closest cluster besides main cluster
+		for x in range(2, num_clusters - 1):
+			shortest_path = nx.shortest_path_length(G, cluster_endpoints[i - 1], cluster_endpoints[x - 1])
+			if shortest_path < closest_length:
+				closest_length = shortest_path
+				nearest_cluster = x
 
-	# Add an edge to connect all clusters (to gurantee it is connected)
-	node_num = nodes_per_cluster - 1 + nodes_per_cluster
-	edge_weight = 1000
-	G.add_edge(nodes_per_cluster - 1, nodes_per_cluster, weight=random.randint(weight_low, weight_high))
-	for i in range(num_clusters - 1 - 1):
-		G.add_edge(node_num, node_num + 1, weight=random.randint(weight_low, weight_high))
-		node_num += nodes_per_cluster
-		edge_weight = int(1000 * pow(0.2, i))
+		# add inner_cluster_edges
+		inner_cluster_edges = np.random.randint(nodes_per_cluster * i, nodes_per_cluster * i + nodes_per_cluster,
+												(int(np.log2(nodes_per_cluster)), 2))
+		G.add_edges_from(inner_cluster_edges)
 
-	G.remove_edges_from(nx.selfloop_edges(G)) #Remove self-loops caused by adding random edges
+		# if the nearest_cluster is too far away, don't add inter-cluster edges
+		if shortest_path > (np.random.randint(np.log2(nodes_per_cluster), np.log2(nodes_per_cluster) + 1)):
+			continue
 
-	#Draw graph
+		# add inter_cluster_edges
+		inter_cluster_edges = np.random.randint(nodes_per_cluster * i, nodes_per_cluster * i + nodes_per_cluster,
+												(int(nodes_per_cluster / (
+															np.random.randint(0, (np.log2(nodes_per_cluster))) + 1))))
+		inter_cluster_edges = [[y, np.random.randint(nodes_per_cluster * nearest_cluster,
+													 nodes_per_cluster * nearest_cluster + nodes_per_cluster)] for y in
+							   inter_cluster_edges]
+
+		G.add_edges_from(inter_cluster_edges)
+	G.remove_edges_from(nx.selfloop_edges(G))  # Remove self-loops caused by adding random edge
+
+	# Add edge weights to the whole graph
+	for (u, v) in G.edges():
+		G.edges[u, v]['weight'] = np.random.random() * (weight_high - weight_low) + weight_low
 	pos = nx.spring_layout(G)
+
+	# Draw graph
 	if draw:
-		nx.draw_networkx_nodes(G, pos, node_color = node_colors)
+		nx.draw_networkx_nodes(G, pos, node_color=node_colors)
 		nx.draw_networkx_labels(G, pos)
 		nx.draw_networkx_edges(G, pos, G.edges())
 		plt.draw()
 		plt.show()
+
 	return G, clusters, pos
 
 def generateClusters(graph: nx.Graph, edge_label: str=None) -> (nx.Graph, list, dict):

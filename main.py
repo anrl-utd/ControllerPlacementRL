@@ -140,9 +140,10 @@ if __name__ == "__main__":
 	
 	try:
 		# Get TopologyZoo graph to train on, using edge label LinkSpeed for edge weight
-		k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
+		#k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
 		# Randomly-generate clusters
-		graph, clusters, pos = generateClusters(k_graph, edge_label='LinkSpeed')
+		#graph, clusters, pos = generateClusters(k_graph, edge_label='LinkSpeed')
+		graph, clusters, pos = generateAlternateGraph(6, 120)
 		print("Generated {}-cluster graph!".format(len(clusters)))
 		train_once(graph, clusters, pos, compute_optimal=False)  # Train
 	except Exception as e:
