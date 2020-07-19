@@ -27,7 +27,7 @@ class ControllerRemove(gym.Env):
     """Base environment used to simulate the network for the RL"""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, graph, clusters, bridge_nodes, pos=None):
+    def __init__(self, graph, clusters, pos=None):
         """Initializes the environment (Runs at first)"""
         print("Initialized environment!")
         self.action_space = spaces.Box(np.zeros(len(clusters)), np.ones(len(clusters)) * len(graph.nodes),
@@ -38,10 +38,9 @@ class ControllerRemove(gym.Env):
             self.pos = nx.spring_layout(graph)  # get the positions of the nodes of the graph
         else:
             self.pos = pos
-        self.clusters = np.stack(clusters)
+        self.clusters = clusters
         self.graph = graph.copy()
         # self.degree = self._graph_degree()
-        self.bridge_nodes = bridge_nodes
 
     def calculateOptimal(self):
         combinations = list(itertools.product(*self.clusters))
@@ -462,51 +461,68 @@ class ControllerRemove(gym.Env):
         return best_node, lowest_weight
 
     def best_action(self):
-        actions = []
-        centroid = self.findGraphCentroid()[0]
+        actions = []  # Set of Controllers
+        # centroid = self.findGraphCentroid()[0]  # Graph Centroid
+        centroid = 253
+        # Search each cluster for a controller to add to the actions variable
         for index, cluster in enumerate(self.clusters):
+            # if the centroid is in the cluster being iterated over, skip that cluster
             if self.graph.nodes[centroid]['cluster'] == index:
                 continue
+
             bestNode = None
             lowestDistance = 100000000
+            # search for node in cluster with smallest distance to centroid node
             for node in cluster:
-                if nx.shortest_path_length(self.graph, centroid, node, weight = 'weight') < lowestDistance:
-                    lowestDistance = nx.shortest_path_length(self.graph, centroid, node, weight = 'weight')
+                if nx.shortest_path_length(self.graph, centroid, node, weight='weight') < lowestDistance:
+                    lowestDistance = nx.shortest_path_length(self.graph, centroid, node, weight='weight')
                     bestNode = node
             actions.append(bestNode)
+
         bestNode = None
         lowestDistance = 10000000
+        # search for best node in the cluster where the centroid node lies within
         for node in self.clusters[self.graph.nodes[centroid]['cluster']]:
             if self.calculateDistance(actions + [node]) < lowestDistance:
                 lowestDistance = self.calculateDistance(actions + [node])
                 bestNode = node
         actions.append(bestNode)
 
-        t0 = time.time()
         # Simulated Annealing Meta Heuristic
         current_state = actions
         annealing_rate = 0.90
-        for x in range(1000):
+        for x in range(0):
             temperature = 1
+            # choose a random already-selected node
             randomCluster = np.random.randint(len(self.clusters))
             randomBestAction = current_state[randomCluster]
-            neighborList = [v for k, v in self.graph.edges if k == randomBestAction and v in self.clusters[self.graph.nodes[randomBestAction]['cluster']]]
+            # get the neighbors of the randomly selected controller
+            neighborList = [v for k, v in self.graph.edges if
+                            (k == randomBestAction and v in self.clusters[
+                                self.graph.nodes[randomBestAction]['cluster']]) or
+                            (v == randomBestAction and k in self.clusters[
+                                self.graph.nodes[randomBestAction]['cluster']])]
             neighborList.append(randomBestAction)
+            # Get a random neighbor
             randomNeighbor = np.random.choice(neighborList)
+            # create an alternate controller list with the neighbor replacing the previous controller
             proposed_state = current_state.copy()
             proposed_state[randomCluster] = randomNeighbor
+            # get a random float between 0 and 1 to be the probability of changing the controller list
             threshold = float(np.random.rand(1))
             proposed_distance = self.calculateDistance(proposed_state)
             current_distance = self.calculateDistance(current_state)
-            probability = 1 if proposed_distance < current_distance else np.exp(-(proposed_distance - current_distance)/temperature)
+            # if the new controller list is better than the original controller list, change to the new controller list
+            # else change to the worst controller list with probability e^(-(new_distance - old_distance) / temperature)
+            probability = 1 if proposed_distance < current_distance else np.exp(
+                -(proposed_distance - current_distance) / temperature)
             if probability >= threshold:
                 current_state = proposed_state.copy()
             temperature *= annealing_rate
-        t1 = time.time()
-        total_time = t1 - t0
-        # if self.calculateDistance(actions) < self.calculateDistance(current_state):
-        #     current_state = actions
-        return current_state, self.calculateDistance(current_state), actions, self.calculateDistance(actions), total_time
+        # ensure that the function returns the best of the original heuristic or the SA version
+        if self.calculateDistance(actions) < self.calculateDistance(current_state):
+            current_state = actions
+        return current_state, self.calculateDistance(current_state)
 
 
 def generateGraph(num_clusters, num_nodes, prob_cluster=0.5, prob=0.2, weight_low=0, weight_high=100, draw=True):

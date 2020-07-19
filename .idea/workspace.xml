@@ -1,7 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6c36dc9b-1015-416e-99f6-853819871de9" name="Default Changelist" comment="" />
+    <list default="true" id="6c36dc9b-1015-416e-99f6-853819871de9" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/../.~lock.topologyzoo.gml#" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../BtAsiaPac.gml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../CrlNetworkServices.gml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Iris.gml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../RedBestel.gml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../addTopologyZooAccessNodes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../generateAlternateGraph.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../topologyzoo.gml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../topologyzoo.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../controller_env/envs/graph_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/../controller_env/envs/graph_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../controller_env/envs/graph_remove.py" beforeDir="false" afterPath="$PROJECT_DIR$/../controller_env/envs/graph_remove.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../heuristic.py" beforeDir="false" afterPath="$PROJECT_DIR$/../heuristic.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../main.py" beforeDir="false" afterPath="$PROJECT_DIR$/../main.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,7 +43,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
   </component>
   <component name="RunManager" selected="Python.main">
     <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true">
@@ -137,9 +153,9 @@
     </configuration>
     <list>
       <item itemvalue="Python.__init__" />
+      <item itemvalue="Python.graph_env (1)" />
       <item itemvalue="Python.graph_env" />
       <item itemvalue="Python.main" />
-      <item itemvalue="Python.graph_env (1)" />
     </list>
     <recent_temporary>
       <list>
@@ -185,22 +201,26 @@
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
     <state x="694" y="310" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.38.1920.1042@0.38.1920.1042" timestamp="1592573515084" />
-    <state width="1899" height="277" key="GridCell.Tab.0.bottom" timestamp="1593110435638">
+    <state width="1899" height="276" key="GridCell.Tab.0.bottom" timestamp="1595174697001">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.bottom/0.38.1920.1042@0.38.1920.1042" timestamp="1593110435638" />
-    <state width="1899" height="277" key="GridCell.Tab.0.center" timestamp="1593110435638">
+    <state width="1899" height="276" key="GridCell.Tab.0.bottom/0.38.1920.1042@0.38.1920.1042" timestamp="1595174697001" />
+    <state width="1899" height="276" key="GridCell.Tab.0.center" timestamp="1595174697000">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.center/0.38.1920.1042@0.38.1920.1042" timestamp="1593110435638" />
-    <state width="1899" height="277" key="GridCell.Tab.0.left" timestamp="1593110435638">
+    <state width="1899" height="276" key="GridCell.Tab.0.center/0.38.1920.1042@0.38.1920.1042" timestamp="1595174697000" />
+    <state width="1899" height="276" key="GridCell.Tab.0.left" timestamp="1595174697000">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.left/0.38.1920.1042@0.38.1920.1042" timestamp="1593110435638" />
-    <state width="1899" height="277" key="GridCell.Tab.0.right" timestamp="1593110435638">
+    <state width="1899" height="276" key="GridCell.Tab.0.left/0.38.1920.1042@0.38.1920.1042" timestamp="1595174697000" />
+    <state width="1899" height="276" key="GridCell.Tab.0.right" timestamp="1595174697001">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.right/0.38.1920.1042@0.38.1920.1042" timestamp="1593110435638" />
+    <state width="1899" height="276" key="GridCell.Tab.0.right/0.38.1920.1042@0.38.1920.1042" timestamp="1595174697001" />
+    <state x="445" y="38" key="SettingsEditor" timestamp="1594997513241">
+      <screen x="0" y="38" width="1920" height="1042" />
+    </state>
+    <state x="445" y="38" key="SettingsEditor/0.38.1920.1042@0.38.1920.1042" timestamp="1594997513241" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -212,13 +232,23 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/../main.py</url>
-          <line>64</line>
+          <line>114</line>
           <option name="timeStamp" value="32" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/../controller_env/envs/graph_env.py</url>
-          <line>197</line>
-          <option name="timeStamp" value="33" />
+          <url>file://$PROJECT_DIR$/../main.py</url>
+          <line>55</line>
+          <option name="timeStamp" value="35" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../controller_env/envs/graph_remove.py</url>
+          <line>492</line>
+          <option name="timeStamp" value="46" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../main.py</url>
+          <line>99</line>
+          <option name="timeStamp" value="47" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
