@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6c36dc9b-1015-416e-99f6-853819871de9" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../../.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../controller_env/envs/graph_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../controller_env/envs/graph_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../main.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -142,6 +142,24 @@
       </map>
     </option>
     <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state width="1899" height="277" key="GridCell.Tab.0.bottom" timestamp="1595690247169">
+      <screen x="0" y="38" width="1920" height="1042" />
+    </state>
+    <state width="1899" height="277" key="GridCell.Tab.0.bottom/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
+    <state width="1899" height="277" key="GridCell.Tab.0.center" timestamp="1595690247169">
+      <screen x="0" y="38" width="1920" height="1042" />
+    </state>
+    <state width="1899" height="277" key="GridCell.Tab.0.center/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
+    <state width="1899" height="277" key="GridCell.Tab.0.left" timestamp="1595690247169">
+      <screen x="0" y="38" width="1920" height="1042" />
+    </state>
+    <state width="1899" height="277" key="GridCell.Tab.0.left/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
+    <state width="1899" height="277" key="GridCell.Tab.0.right" timestamp="1595690247169">
+      <screen x="0" y="38" width="1920" height="1042" />
+    </state>
+    <state width="1899" height="277" key="GridCell.Tab.0.right/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

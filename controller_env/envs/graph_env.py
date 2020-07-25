@@ -252,7 +252,6 @@ class ControllerEnv(gym.Env):
 		return totalDist
 
 	def graphCentroidAction(self) -> list:
-		"""Heuristic function, picks controllers based on centroid"""
 		actions = []  # Set of Controllers
 		centroid = self.findGraphCentroid()[0]  # Graph Centroid
 		# Search each cluster for a controller to add to the actions variable
@@ -274,8 +273,11 @@ class ControllerEnv(gym.Env):
 		lowestDistance = 10000000
 		# search for best node in the cluster where the centroid node lies within
 		for node in self.clusters[self.graph.nodes[centroid]['cluster']]:
-			if self.calculateDistance(actions + [node]) < lowestDistance:
-				lowestDistance = self.calculateDistance(actions + [node])
+			controller_graph, bad_controllers = self._set_controllers(actions + [node])
+			distance =  controller_graph.size(
+				weight='weight') + 100000 * bad_controllers  # 100000 distance per invalid controller
+			if distance < lowestDistance:
+				lowestDistance = distance
 				bestNode = node
 		actions.append(bestNode)
 
@@ -289,10 +291,8 @@ class ControllerEnv(gym.Env):
 			randomBestAction = current_state[randomCluster]
 			# get the neighbors of the randomly selected controller
 			neighborList = [v for k, v in self.graph.edges if
-							(k == randomBestAction and v in self.clusters[
-								self.graph.nodes[randomBestAction]['cluster']]) or
-							(v == randomBestAction and k in self.clusters[
-								self.graph.nodes[randomBestAction]['cluster']])]
+							(k == randomBestAction and v in self.clusters[self.graph.nodes[randomBestAction]['cluster']]) or
+							(v == randomBestAction and k in self.clusters[self.graph.nodes[randomBestAction]['cluster']])]
 			neighborList.append(randomBestAction)
 			# Get a random neighbor
 			randomNeighbor = np.random.choice(neighborList)
@@ -301,8 +301,15 @@ class ControllerEnv(gym.Env):
 			proposed_state[randomCluster] = randomNeighbor
 			# get a random float between 0 and 1 to be the probability of changing the controller list
 			threshold = float(np.random.rand(1))
-			proposed_distance = self.calculateDistance(proposed_state)
-			current_distance = self.calculateDistance(current_state)
+
+			controller_graph, bad_controllers = self._set_controllers(proposed_state)
+			proposed_distance = controller_graph.size(
+				weight='weight') + 100000 * bad_controllers  # 100000 distance per invalid controller
+
+			controller_graph, bad_controllers = self._set_controllers(current_state)
+			current_distance =  controller_graph.size(
+				weight='weight') + 100000 * bad_controllers  # 100000 distance per invalid controller
+
 			# if the new controller list is better than the original controller list, change to the new controller list
 			# else change to the worst controller list with probability e^(-(new_distance - old_distance) / temperature)
 			probability = 1 if proposed_distance < current_distance else np.exp(
@@ -310,10 +317,19 @@ class ControllerEnv(gym.Env):
 			if probability >= threshold:
 				current_state = proposed_state.copy()
 			temperature *= annealing_rate
+
+
 		# ensure that the function returns the best of the original heuristic or the SA version
-		if self.calculateDistance(actions) < self.calculateDistance(current_state):
-			current_state = actions
-		return current_state, self.calculateDistance(current_state)
+		controller_graph, bad_controllers = self._set_controllers(actions)
+		original_distance = controller_graph.size(weight='weight') + 100000 * bad_controllers  # 100000 distance per invalid controller
+
+		controller_graph, bad_controllers = self._set_controllers(current_state)
+		SA_distance = controller_graph.size(weight='weight') + 100000 * bad_controllers  # 100000 distance per invalid controller
+
+		if original_distance < SA_distance:
+			return actions, original_distance
+		else:
+			return current_state, SA_distance
 
 
 def generateGraph(num_clusters: int, num_nodes: int, prob_cluster: float=0.5, prob: float=0.2, weight_low: int=0, weight_high: int=100, draw=True) -> (nx.Graph, list, dict):

@@ -85,7 +85,7 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 		(obs, rew, done, _) = env.step(action)
 		reward += rew
 		reward_final = rew
-	
+
 	# Show controllers chosen by the model
 	env.render(mode='graph_end.png')
 	print(env.controllers, reward_final)
@@ -95,7 +95,7 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 
 	# Show controllers chosen using heuristic
 	env.reset()
-	centroid_controllers = env.graphCentroidAction()
+	centroid_controllers, heuristic_distance = env.graphCentroidAction()
 	for cont in centroid_controllers:
 		(_, reward_final, _, _) = env.step(cont)
 	env.render(mode='graph_heuristic.png')
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
-	
+
 	try:
 		# Get TopologyZoo graph to train on, using edge label LinkSpeed for edge weight
 		#k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
