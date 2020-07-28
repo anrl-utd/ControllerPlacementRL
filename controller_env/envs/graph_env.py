@@ -327,8 +327,10 @@ class ControllerEnv(gym.Env):
 		SA_distance = controller_graph.size(weight='weight') + 100000 * bad_controllers  # 100000 distance per invalid controller
 
 		if original_distance < SA_distance:
+			print("Using original heuristic")
 			return actions, original_distance
 		else:
+			print("Using SA heuristic")
 			return current_state, SA_distance
 
 
