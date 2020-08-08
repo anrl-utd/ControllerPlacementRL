@@ -74,9 +74,9 @@
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
-      <option name="SDK_HOME" value="" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/../../../../univresearch/ControllerPlacementRL/conda/bin/python" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
@@ -109,6 +109,12 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python.__init__" />
+      <item itemvalue="Python.graph_env" />
+      <item itemvalue="Python.main" />
+      <item itemvalue="Python.setup" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
@@ -144,22 +150,26 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
-    <state width="1899" height="277" key="GridCell.Tab.0.bottom" timestamp="1595690247169">
+    <state x="419" y="220" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1596840373255">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.bottom/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
-    <state width="1899" height="277" key="GridCell.Tab.0.center" timestamp="1595690247169">
+    <state x="419" y="220" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.38.1920.1042@0.38.1920.1042" timestamp="1596840373255" />
+    <state width="1899" height="461" key="GridCell.Tab.0.bottom" timestamp="1596840374590">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.center/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
-    <state width="1899" height="277" key="GridCell.Tab.0.left" timestamp="1595690247169">
+    <state width="1899" height="461" key="GridCell.Tab.0.bottom/0.38.1920.1042@0.38.1920.1042" timestamp="1596840374590" />
+    <state width="1899" height="461" key="GridCell.Tab.0.center" timestamp="1596840374590">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.left/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
-    <state width="1899" height="277" key="GridCell.Tab.0.right" timestamp="1595690247169">
+    <state width="1899" height="461" key="GridCell.Tab.0.center/0.38.1920.1042@0.38.1920.1042" timestamp="1596840374590" />
+    <state width="1899" height="461" key="GridCell.Tab.0.left" timestamp="1596840374590">
       <screen x="0" y="38" width="1920" height="1042" />
     </state>
-    <state width="1899" height="277" key="GridCell.Tab.0.right/0.38.1920.1042@0.38.1920.1042" timestamp="1595690247169" />
+    <state width="1899" height="461" key="GridCell.Tab.0.left/0.38.1920.1042@0.38.1920.1042" timestamp="1596840374590" />
+    <state width="1899" height="461" key="GridCell.Tab.0.right" timestamp="1596840374590">
+      <screen x="0" y="38" width="1920" height="1042" />
+    </state>
+    <state width="1899" height="461" key="GridCell.Tab.0.right/0.38.1920.1042@0.38.1920.1042" timestamp="1596840374590" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

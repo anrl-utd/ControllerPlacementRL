@@ -253,7 +253,7 @@ class ControllerEnv(gym.Env):
 
 	def graphCentroidAction(self) -> list:
 		actions = []  # Set of Controllers
-		centroid = self.findGraphCentroid()[0]  # Graph Centroid
+		centroid = nx.barycenter(self.graph, weight="weight")[0]  # Graph Centroid
 		# Search each cluster for a controller to add to the actions variable
 		for index, cluster in enumerate(self.clusters):
 			# if the centroid is in the cluster being iterated over, skip that cluster
@@ -432,7 +432,6 @@ def generateAlternateGraph(num_clusters: int, num_nodes: int, weight_low: int = 
     """
     node_colors = np.arange(0, num_nodes, 1, np.uint8)  # Stores color of nodes
     total_nodes = 0
-    temp_clusters = {}  # Temp storage for clusters
     remainder = num_nodes % num_clusters
     clusters = []  # Stores nodes in each cluster
     # organize number of nodes per cluster and assign node colors
@@ -444,33 +443,31 @@ def generateAlternateGraph(num_clusters: int, num_nodes: int, weight_low: int = 
         else:
             nodes_per_cluster = int(num_nodes / num_clusters)
 
-        temp_clusters[x] = nodes_per_cluster
         node_colors[temp + np.arange(nodes_per_cluster)] = x
         temp += nodes_per_cluster
         clusters.append(list(np.arange(nodes_per_cluster) + total_nodes))
         total_nodes += nodes_per_cluster
     G = nx.Graph()
-
     cluster_endpoints = []
 
     # create first cluster
-    cluster = nx.full_rary_tree(int(np.log2(temp_clusters[0])), temp_clusters[0])
+    cluster = nx.full_rary_tree(int(np.log2(len(clusters[0]))), len(clusters[0]))
 
     temp = 0  # variable used to ensure diameter is as small as possible
-    while nx.diameter(cluster) > (np.log2(temp_clusters[0]) + temp):
-        cluster = nx.full_rary_tree(int(np.log2(temp_clusters[0])),temp_clusters[0])
+    while nx.diameter(cluster) > (np.log2(len(clusters[0])) + temp):
+        cluster = nx.full_rary_tree(int(np.log2(len(clusters[0]))),len(clusters[0]))
         temp += 1
     nx.set_node_attributes(cluster, 0, 'cluster')
 
     # set initial edge weight of first cluster
     for (u, v) in cluster.edges():
-        cluster.edges[u, v]['weight'] = np.random.random() * 0.75 * (weight_high - weight_low) + weight_low * 1.25
+        cluster.edges[u, v]['weight'] = np.random.random() * 0.75 * (weight_high - weight_low) + weight_low + 0.25 * (weight_high - weight_low)
 
-    inner_cluster_edges = np.random.randint(0, temp_clusters[0],
-                                            (int(np.log2(temp_clusters[0])), 2))
+    inner_cluster_edges = np.random.randint(0, len(clusters[0]),
+                                            (int(np.log2(len(clusters[0]))), 2))
 
     # add edge weights to new edges of first cluster
-    inner_cluster_edges =  [(u, v,  np.random.random() * 0.75 * (weight_high - weight_low) + weight_low * 1.25) for u,v in inner_cluster_edges]
+    inner_cluster_edges =  [(u, v,  np.random.random() * 0.75 * (weight_high - weight_low) + weight_low + 0.25 * (weight_high - weight_low)) for u,v in inner_cluster_edges]
     cluster.add_weighted_edges_from(inner_cluster_edges)
 
     G = nx.disjoint_union(G, cluster)
@@ -478,18 +475,18 @@ def generateAlternateGraph(num_clusters: int, num_nodes: int, weight_low: int = 
     # create other clusters
     for i in range(1, num_clusters):
         # create cluster
-        cluster = nx.full_rary_tree(int(np.log2(temp_clusters[i])), temp_clusters[i])
+        cluster = nx.full_rary_tree(int(np.log2(len(clusters[i]))), len(clusters[i]))
         temp = 0
-        while nx.diameter(cluster) > (np.log2(temp_clusters[i]) + temp):
-            cluster = nx.full_rary_tree(int(np.log2(temp_clusters[i])), temp_clusters[i])
+        while nx.diameter(cluster) > (np.log2(len(clusters[i])) + temp):
+            cluster = nx.full_rary_tree(int(np.log2(len(clusters[i]))), len(clusters[i]))
             temp += 1
 
         nx.set_node_attributes(cluster, i, 'cluster')
 
         # set initial edge weights
         for (u, v) in cluster.edges():
-            if not(u in np.arange(temp_clusters[x]/2) or v in np.arange(temp_clusters[x] / 2)):
-                cluster.edges[u, v]['weight'] = np.random.random() * 0.20 * (weight_high - weight_low) + weight_low * 1.05
+            if not(u in clusters[x][:len(clusters[x])//2]) or v in clusters[x][:len(clusters[x])//2]:
+                cluster.edges[u, v]['weight'] = np.random.random() * 0.20 * (weight_high - weight_low) + weight_low + 0.05 * (weight_high - weight_low)
             else:
                 cluster.edges[u, v]['weight'] = np.random.random() * 0.05 * (weight_high - weight_low) + weight_low
 
@@ -497,9 +494,9 @@ def generateAlternateGraph(num_clusters: int, num_nodes: int, weight_low: int = 
         G = nx.disjoint_union(G, cluster)
 
         # add connections from new clusters to first cluster
-        cluster_endpoint = np.random.randint(0, temp_clusters[i])
+        cluster_endpoint = np.random.randint(0, len(clusters[0]))
         cluster_endpoints.append(cluster_endpoint)
-        G.add_edge(cluster_endpoint, np.random.randint(temp_clusters[i] * i, temp_clusters[i] * i + i), weight = np.random.random() * 0.20 * (weight_high - weight_low) + weight_low * 1.05)
+        G.add_edge(cluster_endpoint, np.random.choice(clusters[i][(len(clusters[i]) //2):]), weight = np.random.random() * 0.20 * (weight_high - weight_low) + weight_low  + 0.05 * (weight_high - weight_low))
 
     # adding inter and inner edges of the clusters
     closest_length = 1000
@@ -514,23 +511,24 @@ def generateAlternateGraph(num_clusters: int, num_nodes: int, weight_low: int = 
                 nearest_cluster = x
 
         # add inner_cluster_edges
-        inner_cluster_edges = np.random.randint(temp_clusters[i] * i, temp_clusters[i] * i + temp_clusters[i],
-                                                (int(np.log2(temp_clusters[i])), 2))
+        # get two random points inside a cluster
+        inner_cluster_edges = np.random.randint(clusters[i][0], clusters[i][-1] + 1,
+                                                (int(np.log2(len(clusters[i]))), 2))
         inner_cluster_edges = [(u, v, np.random.random() * 0.05 * (weight_high - weight_low) + weight_low) for
                                u, v in inner_cluster_edges]
         # cluster.add_weighted_edges_from(inner_cluster_edges)
         G.add_weighted_edges_from(inner_cluster_edges)
 
         # if the nearest_cluster is too far away, don't add inter-cluster edges
-        if shortest_path > (np.random.randint(np.log2(temp_clusters[i]), np.log2(temp_clusters[i]) + 1)):
+        if shortest_path > (np.random.randint(np.log2(len(clusters[i])), np.log2(len(clusters[i])) + 1)):
             continue
 
         # add inter_cluster_edges
-        inter_cluster_edges = np.random.randint(temp_clusters[i] * i, temp_clusters[i] * i + temp_clusters[i],
-                                                (int(temp_clusters[i] / (
-                                                            np.random.randint(0, (np.log2(temp_clusters[i]))) + 1))))
-        inter_cluster_edges = [[y, np.random.randint(temp_clusters[i] * nearest_cluster,
-                                                     temp_clusters[i] * nearest_cluster + temp_clusters[i]), np.random.random() * 0.20 * (weight_high - weight_low) + weight_low * 1.05] for y in
+        inter_cluster_edges = np.random.randint(clusters[i][len(clusters[i]) // 2], clusters[i][-1] + 1,
+                                                (int(len(clusters[i]) / (
+                                                            np.random.randint(0, (np.log2(len(clusters[i])))) + 1))))
+        inter_cluster_edges = [[y, np.random.randint(clusters[nearest_cluster][len(clusters[i]) // 2],
+                                                     clusters[nearest_cluster][-1] + 1),np.random.random() * 0.20 * (weight_high - weight_low) + weight_low  + 0.05 * (weight_high - weight_low)] for y in
                                inter_cluster_edges]
 
         # cluster.add_weighted_edges_from(inner_cluster_edges)
