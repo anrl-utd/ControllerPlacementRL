@@ -145,7 +145,7 @@ if __name__ == "__main__":
 		#graph, clusters, pos = generateClusters(k_graph, edge_label='LinkSpeed')
 		graph, clusters, pos = generateAlternateGraph(6, 120)
 		print("Generated {}-cluster graph!".format(len(clusters)))
-		# train_once(graph, clusters, pos, compute_optimal=False)  # Train
+		train_once(graph, clusters, pos, compute_optimal=False)  # Train
 	except Exception as e:
 		print(e)
 		traceback.print_exc()
