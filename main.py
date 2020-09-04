@@ -49,7 +49,9 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	# Generate custom replay buffer full of valid experiences to speed up exploration of training
 	def add_wrapper(replay_buffer):
 		# Replay buffer maxsize is by default 50000. Should this be lowered?
-		valid_controllers_set = [env._random_valid_controllers() for i in range(int(replay_buffer._maxsize * 0.5 / len(clusters)))]
+		# valid_controllers_set = [env._random_valid_controllers() for i in range(int(replay_buffer._maxsize * 0.5 / len(clusters)))]
+		# Uses heuristic controller set as innitial 'random' controllers
+		valid_controllers_set = env.graphCentroidAction()
 	
 		for valid_controllers in valid_controllers_set:
 			obs_current = env.reset()  # Really strange issue - obs_current follows the change in env.state, making it equal to obs!
