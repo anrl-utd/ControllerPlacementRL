@@ -19,3 +19,13 @@ register(
     id='Controller-Select-v0',
     entry_point='controller_env.envs:ControllerSlowSelect',
 )
+
+register(
+	id='Controller-Cluster-v0',
+	entry_point='controller_env.envs:ControllerClusterSelect',
+)
+
+register(
+	id='Controller-Cluster-Options-v0',
+	entry_point='controller_env.envs:ControllerClusterSelectModified'
+)

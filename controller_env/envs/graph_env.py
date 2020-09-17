@@ -181,6 +181,7 @@ class ControllerEnv(gym.Env):
 		"""
 		adjacency_matrix = np.zeros(shape=(len(self.clusters), len(self.clusters)), dtype=int)
 		graph_nodes = dict(self.graph.nodes(data='cluster'))
+		#print(graph_nodes)
 		for edge in self.graph.edges():
 			# edge is (u, v) where u and v are node IDs
 			#node_1 = self.graph.nodes[edge[0]]['id']
@@ -253,7 +254,7 @@ class ControllerEnv(gym.Env):
 
 	def graphCentroidAction(self) -> list:
 		actions = []  # Set of Controllers
-		centroid = nx.barycenter(self.graph, weight="weight")[0]  # Graph Centroid
+		centroid = nx.algorithms.distance_measures.barycenter(self.graph, weight="weight")[0]  # Graph Centroid
 		# Search each cluster for a controller to add to the actions variable
 		for index, cluster in enumerate(self.clusters):
 			# if the centroid is in the cluster being iterated over, skip that cluster

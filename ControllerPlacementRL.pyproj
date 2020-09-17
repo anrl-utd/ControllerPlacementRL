@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{0870683f-08f9-4644-a020-5e7cfdb724bb}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_graph.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -25,6 +25,9 @@
     <Content Include="requirements.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="controller_env\envs\graph_cluster_select.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="controller_env\envs\graph_direct.py" />
     <Compile Include="controller_env\envs\graph_env.py" />
     <Compile Include="controller_env\envs\graph_nudge.py" />

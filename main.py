@@ -24,7 +24,7 @@ import pickle
 import sys
 import signal
 
-def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Controller-Select-v0', compute_optimal: bool=True, trained_model: DQN=None, steps: int=2e5) -> DQN:
+def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Controller-Select-v0', compute_optimal: bool=True, trained_model: DQN=None, steps: int=2e5, logdir: str='train_log_compare', env_kwargs: dict={}) -> DQN:
 	"""
 	Main training loop. Initializes RL environment, performs training, and outputs results
 	Args:
@@ -38,8 +38,8 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 		Trained model
 	"""
 	# Selecting controllers one-at-a-time environment
-	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos)
-	env.reset()
+	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos, **env_kwargs)
+	print(env.reset().shape)
 	env.render(mode='original_graph.png')
 	optimal_controllers = None
 	if compute_optimal:
@@ -63,12 +63,12 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	model = None
 	if trained_model is None:
 		print("Creating new training model!")
-		model = DQN(LnMlpPolicy, env, tensorboard_log='train_log_compare', verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32, seed=100)
+		model = DQN(LnMlpPolicy, env, tensorboard_log=logdir, verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32, seed=256)
 	else:
 		print("Using provided training model!")
 		model = trained_model
 		model.set_env(env)
-		model.tensorboard_log = 'train_log_compare'
+		model.tensorboard_log = logdir
 
 	# Train the agent
 	print("Training!")
@@ -91,14 +91,25 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	print(env.controllers, reward_final)
 	print("BEST EVER:")
 	print(env.best_controllers, env.best_reward)
-	print(env.optimal_neighbors(graph, env.best_controllers))
+	best_reward = env.optimal_neighbors(graph, env.best_controllers)
+	print(best_reward)
 
 	# Show controllers chosen using heuristic
 	env.reset()
 	centroid_controllers, heuristic_distance = env.graphCentroidAction()
+	# Convert heuristic controllers to actual
+	print(centroid_controllers)
+	if env_name == 'Controller-Cluster-v0' or env_name == 'Controller-Cluster-Options-v0':
+		# Assume all clusters same length
+		centroid_controllers.sort()
+		cluster_len = len(clusters[0])
+		for i in range(len(clusters)):
+			centroid_controllers[i] -= i * cluster_len
+	print(centroid_controllers)
 	for cont in centroid_controllers:
 		(_, reward_final, _, _) = env.step(cont)
 	env.render(mode='graph_heuristic.png')
+	best_heuristic = reward_final
 	print(env.controllers, reward_final)
 	print(env.optimal_neighbors(graph,  env.controllers))
 
@@ -110,30 +121,23 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 		env.render(mode='graph_optimal.png')
 		print(env.controllers, reward_final)
 		print(optimal_controllers)
-	return model
+	return model, best_reward, best_heuristic
 
 if __name__ == "__main__":
 	graph = None
 	clusters = None
 	pos = None
-	np.random.seed(100)
+	np.random.seed(256)
 	# This might be lazy code, but I think it is not worth importing more modules just to check if file exists before trying to open it
 	if os.path.isfile('clusters.pickle') and os.path.isfile('graph.gpickle') and os.path.isfile('position.pickle'):
 		print("Found graph from file, using saved graph")
 		clusters = pickle.load(open('clusters.pickle', 'rb'))
 		pos = pickle.load(open('position.pickle', 'rb'))
 		graph = nx.read_gpickle('graph.gpickle')
+		print(clusters)
 	else:
 		print("Generating graph")
-		#graph, clusters, pos = generateGraph(6, 90, draw=False, weight_low=1, weight_high=10)
-		clusters = []
-		graph = None
-		pos = None
-		while len(clusters) < 8:
-			k_graph = nx.fast_gnp_random_graph(180, 0.05)
-			while(not nx.is_connected(k_graph)):
-				k_graph = nx.fast_gnp_random_graph(180, 0.05)
-			graph, clusters, pos = generateClusters(k_graph)
+		graph, clusters, pos = generateAlternateGraph(6, 180)
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))
@@ -143,9 +147,9 @@ if __name__ == "__main__":
 		#k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
 		# Randomly-generate clusters
 		#graph, clusters, pos = generateClusters(k_graph, edge_label='LinkSpeed')
-		graph, clusters, pos = generateAlternateGraph(6, 120)
 		print("Generated {}-cluster graph!".format(len(clusters)))
-		train_once(graph, clusters, pos, compute_optimal=False)  # Train
+		m, best_rl, best_heuristic = train_once(graph, clusters, pos, compute_optimal=False, env_name='Controller-Cluster-v0', logdir='train_log_env_compare')  # Train
+		print("Best-ever RL: {}, Heuristic: {}".format(best_rl, best_heuristic))
 	except Exception as e:
 		print(e)
 		traceback.print_exc()

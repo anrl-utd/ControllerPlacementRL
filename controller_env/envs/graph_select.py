@@ -17,7 +17,7 @@ class ControllerSlowSelect(ControllerEnv):
 		super().__init__(graph, clusters, pos, check_controller_num=False)
 		self.action_space = spaces.Discrete(len(graph.nodes))
 		# self.action_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.float32)
-		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
+		self.observation_space = spaces.Box(-1, 1, (len(graph.nodes),), dtype=np.bool)
 		self.controllers = []
 		self.best_controllers = []
 		self.best_reward = 100000

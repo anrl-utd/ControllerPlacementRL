@@ -484,3 +484,8 @@ MigrationBackup/
 /graph.gpickle
 /ckpt_model.zip
 /AttMpls.graphml
+/train_logs
+/train_log_compare_reward
+/train_log_env_compare
+*.graphml
+*.txt

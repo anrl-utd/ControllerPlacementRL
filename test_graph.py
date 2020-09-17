@@ -1,14 +1,21 @@
 import networkx as nx
-import gym
 import numpy as np
-import controller_env
+from controller_env.envs.graph_env import generateClusters, ControllerEnv
 import pickle
 
-clusters = pickle.load(open('C:/Users/usaid/Downloads/clusters.pickle', 'rb'))
-graph = nx.read_gpickle('C:/Users/usaid/Downloads/graph.gpickle')
-env = gym.make('Controller-v0', graph=graph, clusters=clusters)
-env.reset()
-env.render()
-for i in range(15):
-	print(env.step([13, 30, 68, 55, 79, 15 + i]))
-print(env.step([9, 29, 30, 55, 79, 68]))
+#k_graph = nx.fast_gnp_random_graph(95, 0.05)
+#while(not nx.is_connected(k_graph)):
+#	k_graph = nx.fast_gnp_random_graph(95, 0.05)
+#k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
+#edge_dict = nx.get_edge_attributes(k_graph, 'LinkSpeed')
+#new_edges = { key: float(value) for key, value in edge_dict.items() }
+#nx.set_edge_attributes(k_graph, new_edges, 'weight')
+#print(nx.get_edge_attributes(k_graph, 'weight'))
+#graph, clusters, pos = generateClusters(k_graph)
+#print(list(graph.nodes.data()))
+#print(clusters)
+
+clusters = pickle.load(open('clusters.pickle', 'rb'))
+graph = nx.read_gpickle('graph.gpickle')
+env = ControllerEnv(graph, clusters)
+print(env.graphCentroidAction())
