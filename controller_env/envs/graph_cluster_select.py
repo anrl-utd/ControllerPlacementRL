@@ -22,6 +22,7 @@ class ControllerClusterSelect(ControllerEnv):
 		self.controllers = []
 		self.best_controllers = []
 		self.best_reward = 100000
+		self.cumulative_reward = 0  # Cumulative reward since env init - does not reset
 
 		self.num_clusters = len(clusters)
 		print(self.num_clusters)
@@ -71,6 +72,7 @@ class ControllerClusterSelect(ControllerEnv):
 		# TODO: Speed up by using self.state == -1 to determine if the action is erroneous and just set reward of -10000 (no need to do controller setting)
 		(obs, rew, done, i) = (self.state.copy(), super().step(self.controllers), self.cluster_index >= self.num_clusters, {})
 		if done:
+			self.cumulative_reward += rew  # Add cumulative only when done
 			if self.best_reward > rew:
 				self.best_controllers = self.controllers
 				self.best_reward = rew
@@ -82,6 +84,7 @@ class ControllerClusterSelect(ControllerEnv):
 		self.state = np.zeros(shape=len(self.graph.nodes))
 		#self.state = np.ones(shape=len(self.clusters)) * -1  # List of -1
 		self.cluster_index = 0
+		super.reset()
 		return self.state.copy()
 
 	def optimal_neighbors(self, graph, controllers : list) -> (list, int):

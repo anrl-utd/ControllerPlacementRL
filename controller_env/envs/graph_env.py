@@ -43,6 +43,7 @@ class ControllerEnv(gym.Env):
 		self.check_controller_num = check_controller_num
 		self.current_controllers = None  # Stores controllers placed in last action (used for rendering)
 		self.adjacent_clusters = self._get_adjacent_clusters()
+		self.controller_distances = {}
 		print("Cluster adjacency matrix:")
 		print(self.adjacent_clusters)
 		print("Initialized environment!")
@@ -119,6 +120,28 @@ class ControllerEnv(gym.Env):
 		else:
 			plt.savefig(mode, bbox_inches='tight')  # A little hacky, but a way to provide the save file name without creating a parameter
 
+	def reset(self):
+		self.current_controllers = None  # Stores controllers placed in last action (used for rendering)
+
+	def _get_distance(self, controller_1, controller_2):
+		"""
+		Returns distance between two controllers and uses dynamic programming to save some computation time
+		"""
+		less_controller = None
+		greater_controller = None
+		if controller_1 < controller_2:
+			less_controller = controller_1
+			greater_controller = controller_2
+		else:
+			less_controller = controller_2
+			greater_controller = controller_1
+		if (less_controller, greater_controller) in self.controller_distances:
+			return self.controller_distances[(less_controller, greater_controller)]
+		else:
+			distance = nx.dijkstra_path_length(self.graph, source=less_controller, target=greater_controller)
+			self.controller_distances[(less_controller, greater_controller)] = distance
+			return distance
+
 	def _set_controllers(self, controllers: list) -> (nx.Graph, int):
 		"""
 		Creates metagraph of controllers
@@ -156,7 +179,7 @@ class ControllerEnv(gym.Env):
 			second_cluster = clusters[pair[1]]
 			assert first_cluster != second_cluster, "2 controllers in same cluster in _set_controllers {} {}".format(first_cluster, second_cluster)
 			if self.adjacent_clusters[first_cluster][second_cluster] == 1:
-				controller_graph.add_edge(first_cluster, second_cluster, weight=nx.dijkstra_path_length(self.graph, source=pair[0], target=pair[1]))
+				controller_graph.add_edge(first_cluster, second_cluster, weight=self._get_distance(pair[0], pair[1]))
 
 		self.current_controllers = valid_controllers.copy()
 		return (controller_graph, num_erroneous)
@@ -202,7 +225,7 @@ class ControllerEnv(gym.Env):
 		distance = 0
 		for current_controller in range(len(controllers)):
 			for other_controller in range(current_controller, len(controllers)):
-				distance += nx.dijkstra_path_length(graph, controllers[current_controller],
+				distance += self._get_distance(controllers[current_controller],
 												   controllers[other_controller])
 		return distance
 
@@ -236,7 +259,8 @@ class ControllerEnv(gym.Env):
 			for other_node in self.graph.nodes:
 				if other_node == cur_node:
 					continue
-				cur_weight += nx.shortest_path_length(self.graph, cur_node, other_node, weight = 'weight')
+				#cur_weight += nx.shortest_path_length(self.graph, cur_node, other_node, weight = 'weight')
+				cur_weight += self._get_distance(cur_node, other_node)
 			# print("This is the length to all other nodes:", cur_weight, cur_node)
 			if cur_weight < lowest_weight:
 				lowest_weight = cur_weight
@@ -249,7 +273,8 @@ class ControllerEnv(gym.Env):
 		for action in list(itertools.combinations(actions, 2)):
 			# print("distance to find is: ", action)
 			# print(nx.shortest_path_length(self.graph, action[0], action[1], weight='weight'))
-			totalDist += nx.shortest_path_length(self.graph, action[0], action[1], weight = 'weight')
+			#totalDist += nx.shortest_path_length(self.graph, action[0], action[1], weight = 'weight')
+			totalDist += self._get_distance(action[0], action[1])
 		return totalDist
 
 	def graphCentroidAction(self) -> list:
@@ -265,8 +290,10 @@ class ControllerEnv(gym.Env):
 			lowestDistance = 100000000
 			# search for node in cluster with smallest distance to centroid node
 			for node in cluster:
-				if nx.shortest_path_length(self.graph, centroid, node, weight='weight') < lowestDistance:
-					lowestDistance = nx.shortest_path_length(self.graph, centroid, node, weight='weight')
+				#if nx.shortest_path_length(self.graph, centroid, node, weight='weight') < lowestDistance:
+				if self._get_distance(centroid, node) < lowestDistance:
+					#lowestDistance = nx.shortest_path_length(self.graph, centroid, node, weight='weight')
+					lowestDistance = self._get_distance(centroid, node)
 					bestNode = node
 			actions.append(bestNode)
 

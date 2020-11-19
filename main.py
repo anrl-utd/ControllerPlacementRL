@@ -9,7 +9,7 @@ os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'  # Necessary to supress For
 import gym
 import numpy as np
 import controller_env
-from controller_env.envs.graph_env import generateGraph, generateAlternateGraph, generateClusters
+from controller_env.envs.graph_env import generateGraph, generateAlternateGraph, generateClusters, ControllerEnv
 import random
 import matplotlib.pyplot as plt
 import math
@@ -23,8 +23,32 @@ import shutil
 import pickle
 import sys
 import signal
+import optuna
 
-def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Controller-Select-v0', compute_optimal: bool=True, trained_model: DQN=None, steps: int=2e5, logdir: str='train_log_compare', env_kwargs: dict={}) -> DQN:
+def optimize(trial, graph, clusters, heuristic_rounded, env, env_name='Controller-Cluster-v0', env_kwargs: dict={}):
+	"""Optimizes algorithm uses Optuna"""
+	try:
+		model_params = {
+			#'gamma': trial.suggest_loguniform('gamma', 0.9, 0.999),
+			#'learning_rate': trial.suggest_uniform('learning_rate', 0.00005, 0.001),
+			'exploration_fraction': trial.suggest_uniform('exploration_fraction', 0.05, 0.2),
+			'buffer_size': trial.suggest_int('buffer_size', low=25000, high=100000, step=25000),
+			'learning_starts': trial.suggest_int('learning_starts', 0, 2000, step=200),
+			#'prioritized_replay': trial.suggest_categorical('prioritized_replay', [True, False]),
+			#'double_q': trial.suggest_categorical('double_q', [True, False])
+		}
+
+		# Selecting controllers one-at-a-time environment
+		env.reset()
+		# Agent
+		model = DQN(LnMlpPolicy, env, tensorboard_log='train_log_optuna', verbose=0, seed=256, double_q=True, prioritized_replay=True, learning_rate=0.001, gamma=0.9, batch_size=64, **model_params)
+		model.learn(total_timesteps=int(2e5))
+		#trial.report(env.best_reward)
+		return env.cumulative_reward / (env.best_reward - heuristic_rounded)
+	except KeyboardInterrupt:
+		return Exception
+
+def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Controller-Select-v0', compute_optimal: bool=True, trained_model: DQN=None, steps: int=2e5, logdir: str='train_log_compare', env_kwargs: dict={}) -> (DQN, float, float):
 	"""
 	Main training loop. Initializes RL environment, performs training, and outputs results
 	Args:
@@ -149,9 +173,21 @@ if __name__ == "__main__":
 		#k_graph = nx.graphml.read_graphml('Uninett2010.graphml')
 		# Randomly-generate clusters
 		#graph, clusters, pos = generateClusters(k_graph, edge_label='LinkSpeed')
-		print("Generated {}-cluster graph!".format(len(clusters)))
-		m, best_rl, best_heuristic = train_once(graph, clusters, pos, compute_optimal=False, env_name='Controller-Cluster-v0', logdir='train_log_env_compare')  # Train
-		print("Best-ever RL: {}, Heuristic: {}".format(best_rl, best_heuristic))
+		#print("Generated {}-cluster graph!".format(len(clusters)))
+		#m, best_rl, best_heuristic = train_once(graph, clusters, pos, compute_optimal=False, env_name='Controller-Cluster-v0', logdir='train_log_env_compare')  # Train
+		#print("Best-ever RL: {}, Heuristic: {}".format(best_rl, best_heuristic))
+		# Get heuristic value so you don't have to repeat for every train
+		heuristic_env = ControllerEnv(graph, clusters)
+		heuristic_controllers, heuristic = heuristic_env.graphCentroidAction()
+		print("Heuristic: ")
+		print(heuristic_controllers, heuristic)
+		study = optuna.create_study(study_name='dqn_optimize', storage='sqlite:///params_dqn.db', load_if_exists=True)
+		study.optimize(lambda trial: optimize(trial, graph, clusters, heuristic - (heuristic % 100), gym.make(env_name, graph=graph, clusters=clusters, pos={}, **env_kwargs)), show_progress_bar=True)
+		print("STUDY BEST PARAMS: ", study.best_params)
+		print("STUDY BEST EVER: ", study.best_value)
+		print("STUDY BEST TRIAL: ", study.best_trial)
+		print("NUM TRIALS: ", len(study.trials))
+
 	except Exception as e:
 		print(e)
 		traceback.print_exc()
