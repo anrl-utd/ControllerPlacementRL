@@ -3,3 +3,4 @@ from controller_env.envs.graph_nudge import ControllerRandomStart
 from controller_env.envs.graph_direct import ControllerDirectSelect
 from controller_env.envs.graph_select import ControllerSlowSelect
 from controller_env.envs.graph_cluster_select import ControllerClusterSelect, ControllerClusterSelectModified
+from controller_env.envs.graph_single import ControllerSingleSelect, ControllerAllSelect

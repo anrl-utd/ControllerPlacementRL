@@ -36,7 +36,7 @@ class ControllerClusterSelect(ControllerEnv):
 		self.action_space = spaces.Discrete(self.max_cluster_len)
 		#self.action_space = spaces.Box(0, self.max_cluster_len, (2,))
 		#self.observation_space = spaces.Box(-1, self.max_cluster_len, (len(clusters),))
-		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.bool)
+		self.observation_space = spaces.Box(0, 1, (len(graph.nodes),), dtype=np.int32)
 
 		# Created to speed up creating observation
 		self.state = np.zeros(shape=len(self.graph.nodes))
@@ -76,15 +76,37 @@ class ControllerClusterSelect(ControllerEnv):
 			if self.best_reward > rew:
 				self.best_controllers = self.controllers
 				self.best_reward = rew
+		#else:  # Test if providing reward at end of episode is better
+		#	rew = 0
 		return (obs, -rew, done, i)
 
-	def reset(self):
+	def reset(self, adjust=False):
 		"""Resets environment"""
 		self.controllers = []
 		self.state = np.zeros(shape=len(self.graph.nodes))
 		#self.state = np.ones(shape=len(self.clusters)) * -1  # List of -1
 		self.cluster_index = 0
-		super.reset()
+		super().reset()
+		if adjust:
+			# Shift the optimal by some amount by doing a random increase to a path between 2 random nodes
+			start_cluster = np.random.randint(0, self.num_clusters)
+			end_cluster = np.random.randint(0, self.num_clusters)
+			while end_cluster == start_cluster:
+				end_cluster = np.random.randint(0, self.num_clusters)
+			start_controller = np.random.choice(self.clusters[start_cluster])
+			end_controller = np.random.choice(self.clusters[end_cluster])
+			#while end_controller == start_controller:
+			#	end_controller = np.random.randint(0, len(self.graph.nodes))
+			path = nx.shortest_path(self.graph, source=start_controller, target=end_controller, weight='weight')
+			prior_node = start_controller
+			random_change = np.random.randint(-5, 6)
+			for i in range(1, len(path)):
+				#print(i, self.graph[prior_node][path[i]]['weight'])
+				self.graph[prior_node][path[i]]['weight'] += random_change
+				#print(i, self.graph[prior_node][path[i]]['weight'])
+				if self.graph.get_edge_data(prior_node, path[i])['weight'] < 0:
+					self.graph[prior_node][path[i]]['weight'] = 0
+				prior_node = path[i]
 		return self.state.copy()
 
 	def optimal_neighbors(self, graph, controllers : list) -> (list, int):

@@ -32,12 +32,21 @@
     <Compile Include="controller_env\envs\graph_env.py" />
     <Compile Include="controller_env\envs\graph_nudge.py" />
     <Compile Include="controller_env\envs\graph_select.py" />
+    <Compile Include="controller_env\envs\graph_single.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="controller_env\envs\__init__.py" />
     <Compile Include="controller_env\__init__.py" />
+    <Compile Include="graph_env_tfagents.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="graph_policy.py" />
     <Compile Include="main.py" />
     <Compile Include="setup.py" />
-    <Compile Include="test_graph.py" />
+    <Compile Include="heuristic_graph.py" />
+    <Compile Include="test_graph.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="controller_env" />

@@ -32,6 +32,7 @@ class ControllerEnv(gym.Env):
 		#self.observation_space = spaces.Box(np.zeros(shape=len(graph.nodes)), np.ones(shape=len(graph.nodes)), dtype=np.bool)
 		
 		self.original_graph = graph.copy()  # Keep original graph in case of needing it for reset
+		self.num_resets = 0
 		# Generate graph display positions if needed
 		if(pos is None):
 			self.pos = nx.kamada_kawai_layout(graph)   # get the positions of the nodes of the graph
@@ -68,7 +69,7 @@ class ControllerEnv(gym.Env):
 		Otherwise, distance is the shortest-path distance between the source controller and destination
 		Add up all distances and have that as initial reward
 		"""
-		controller_graph = None  # Stores controller metagraph
+		self.controller_graph = None  # Stores controller metagraph
 		# Create metagraph of controllers. The node at an index corresponds to the controller of the cluster of that index
 		controller_graph, bad_controllers = self._set_controllers(action)
 		# Return output reward
@@ -115,18 +116,20 @@ class ControllerEnv(gym.Env):
 		edge_labels = nx.get_edge_attributes(render_graph,'weight')
 		nx.draw_networkx_edge_labels(render_graph,self.pos,edge_labels=edge_labels)  # draw the edge weights of the render_graph
 		plt.draw()
-		if mode is 'human':
+		if mode == 'human':
 			plt.show()
 		else:
 			plt.savefig(mode, bbox_inches='tight')  # A little hacky, but a way to provide the save file name without creating a parameter
 
 	def reset(self):
+		self.num_resets += 1
 		self.current_controllers = None  # Stores controllers placed in last action (used for rendering)
 
 	def _get_distance(self, controller_1, controller_2):
 		"""
 		Returns distance between two controllers and uses dynamic programming to save some computation time
 		"""
+		#return  nx.dijkstra_path_length(self.graph, source=controller_1, target=controller_2)
 		less_controller = None
 		greater_controller = None
 		if controller_1 < controller_2:

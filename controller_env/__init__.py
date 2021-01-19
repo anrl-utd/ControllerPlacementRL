@@ -29,3 +29,13 @@ register(
 	id='Controller-Cluster-Options-v0',
 	entry_point='controller_env.envs:ControllerClusterSelectModified'
 )
+
+register(
+	id='Controller-Single-v0',
+	entry_point='controller_env.envs:ControllerSingleSelect'
+)
+
+register(
+	id='Controller-All-v0',
+	entry_point='controller_env.envs:ControllerAllSelect'
+)

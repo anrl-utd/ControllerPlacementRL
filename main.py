@@ -17,7 +17,7 @@ import networkx as nx
 import traceback
 
 from stable_baselines import PPO1, DQN
-from stable_baselines.deepq.policies import MlpPolicy, LnMlpPolicy
+from stable_baselines.deepq.policies import MlpPolicy, LnMlpPolicy, MlpLnLstmPolicy
 from stable_baselines.deepq.replay_buffer import ReplayBuffer  # PrioritizedReplayBuffer vs ReplayBuffer, what is the difference?
 import shutil
 import pickle
@@ -63,12 +63,16 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	"""
 	# Selecting controllers one-at-a-time environment
 	env = gym.make(env_name, graph=graph, clusters=clusters, pos=pos, **env_kwargs)
-	print(env.reset().shape)
+	#for i in range(1000):
+	#	env.reset()
+	#	print(env.graph.size(weight='weight'))
+	orig_graph = env.original_graph
 	env.render(mode='original_graph.png')
 	optimal_controllers = None
 	if compute_optimal:
 		print("Computing optimal!")
 		optimal_controllers = env.calculateOptimal()
+
 
 	# Generate custom replay buffer full of valid experiences to speed up exploration of training
 	def add_wrapper(replay_buffer):
@@ -89,7 +93,7 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	model = None
 	if trained_model is None:
 		print("Creating new training model!")
-		model = DQN(LnMlpPolicy, env, tensorboard_log=logdir, verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32, seed=256)
+		model = DQN(LnMlpPolicy, env, tensorboard_log=logdir, verbose=0, exploration_initial_eps=0.2, exploration_fraction=0.025, learning_starts=0, target_network_update_freq=100, batch_size=32, learning_rate=0.00025, seed=256)
 	else:
 		print("Using provided training model!")
 		model = trained_model
@@ -106,9 +110,11 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	reward_final = 0
 	done = False
 	action = None
+	final_rl_actions = []
 	while not done:
 		action, states = model.predict(obs)
 		(obs, rew, done, _) = env.step(action)
+		final_rl_actions.append(action)
 		reward += rew
 		reward_final = rew
 
@@ -120,25 +126,69 @@ def train_once(graph: nx.Graph, clusters: list, pos: dict, env_name: str='Contro
 	best_reward = env.optimal_neighbors(graph, env.best_controllers)
 	print(best_reward)
 
+	print("HEURISTIC ON AVERAGE CHANGE:")
+	for edge in orig_graph.edges:
+		env.graph.edges[edge]['weight'] = orig_graph.edges[edge]['weight'] + (env.graph.edges[edge]['weight'] - orig_graph.edges[edge]['weight']) / env.num_resets
+	rl_controllers = env.best_controllers
+	if env_name == 'Controller-Cluster-v0':
+		rl_controllers.sort()
+		cluster_len = len(clusters[0])
+		for i in range(len(clusters)):
+			rl_controllers[i] -= i * cluster_len
+	env.reset(adjust=False)
+	for cont in rl_controllers:
+		(_, reward_final, _, _) = env.step(cont)
+	print("RL on average change graph {} - {}".format(env.best_controllers, reward_final))
 	# Show controllers chosen using heuristic
-	env.reset()
 	centroid_controllers, heuristic_distance = env.graphCentroidAction()
 	# Convert heuristic controllers to actual
-	print(centroid_controllers)
 	if env_name == 'Controller-Cluster-v0' or env_name == 'Controller-Cluster-Options-v0':
 		# Assume all clusters same length
 		centroid_controllers.sort()
 		cluster_len = len(clusters[0])
 		for i in range(len(clusters)):
 			centroid_controllers[i] -= i * cluster_len
-	print(centroid_controllers)
+	env.reset(adjust=False)
 	for cont in centroid_controllers:
 		(_, reward_final, _, _) = env.step(cont)
 	env.render(mode='graph_heuristic.png')
 	best_heuristic = reward_final
-	print(env.controllers, reward_final)
-	print(env.optimal_neighbors(graph,  env.controllers))
+	print("Heuristic on average change graph {} - {}".format(env.controllers, reward_final))
+	#print("Heuristic optimal {} - {}".format(*env.optimal_neighbors(graph,  env.controllers)))
+	heuristic_controllers = env.controllers
 
+	rl_rewards = []
+	heuristic_rewards = []
+	NUM_GRAPHS = 100
+	for i in range(NUM_GRAPHS):
+		rl_reward = None
+		heuristic_reward = None
+		env.reset()
+		for cont in final_rl_actions:
+			(_, rl_reward, _, _) = env.step(cont)
+		env.reset(adjust=False)
+		for cont in centroid_controllers:
+			(_, heuristic_reward, _, _) = env.step(cont)
+		print("RL REWARD, HEURISTIC: {}\t{}".format(rl_reward, heuristic_reward))
+		rl_rewards.append(rl_reward)
+		heuristic_rewards.append(heuristic_reward)
+
+	def create_hist(fig, data, title=None, color=None):
+		bins = np.arange(0, 2000, 100)
+		plt.xlim([min(data) - 100, max(data) + 100])
+		fig.hist(data, bins=bins, alpha=0.5, color=color)
+		if title:
+			fig.title(title)
+		plt.xlabel('Controller Distances')
+		plt.ylabel('Count')
+	fig = plt.figure()
+	ax1 = fig.add_subplot(2, 1, 1)
+	create_hist(ax1, rl_rewards, color='blue')
+	create_hist(ax1, heuristic_rewards, color='red')
+	ax2 = fig.add_subplot(2, 1, 2)
+	ax2.plot(np.arange(0, NUM_GRAPHS, 1), rl_rewards, c='blue')
+	ax2.plot(np.arange(0, NUM_GRAPHS, 1), heuristic_rewards, c='red')
+	plt.show()
 	# Show optimal
 	if optimal_controllers is not None:
 		env.reset()
@@ -177,16 +227,21 @@ if __name__ == "__main__":
 		#m, best_rl, best_heuristic = train_once(graph, clusters, pos, compute_optimal=False, env_name='Controller-Cluster-v0', logdir='train_log_env_compare')  # Train
 		#print("Best-ever RL: {}, Heuristic: {}".format(best_rl, best_heuristic))
 		# Get heuristic value so you don't have to repeat for every train
-		heuristic_env = ControllerEnv(graph, clusters)
-		heuristic_controllers, heuristic = heuristic_env.graphCentroidAction()
-		print("Heuristic: ")
-		print(heuristic_controllers, heuristic)
-		study = optuna.create_study(study_name='dqn_optimize', storage='sqlite:///params_dqn.db', load_if_exists=True)
-		study.optimize(lambda trial: optimize(trial, graph, clusters, heuristic - (heuristic % 100), gym.make(env_name, graph=graph, clusters=clusters, pos={}, **env_kwargs)), show_progress_bar=True)
-		print("STUDY BEST PARAMS: ", study.best_params)
-		print("STUDY BEST EVER: ", study.best_value)
-		print("STUDY BEST TRIAL: ", study.best_trial)
-		print("NUM TRIALS: ", len(study.trials))
+
+		# Optuna stuff
+		#heuristic_env = ControllerEnv(graph, clusters)
+		#heuristic_controllers, heuristic = heuristic_env.graphCentroidAction()
+		#print("Heuristic: ")
+		#print(heuristic_controllers, heuristic)
+		#study = optuna.create_study(study_name='dqn_optimize', storage='sqlite:///params_dqn.db', load_if_exists=True)
+		#env = gym.make('Controller-Cluster-v0', graph=graph, clusters=clusters, pos={})
+		#study.optimize(lambda trial: optimize(trial, graph, clusters, heuristic - (heuristic % 100), env), show_progress_bar=True)
+		#print("STUDY BEST PARAMS: ", study.best_params)
+		#print("STUDY BEST EVER: ", study.best_value)
+		#print("STUDY BEST TRIAL: ", study.best_trial)
+		#print("NUM TRIALS: ", len(study.trials))
+
+		train_once(graph, clusters, pos, 'Controller-Cluster-v0', False, steps=5e5)
 
 	except Exception as e:
 		print(e)

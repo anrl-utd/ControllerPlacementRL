@@ -1,93 +1,107 @@
-import os.path as osp
-
-import argparse
-import torch
-import torch.nn.functional as F
-from torch_geometric.datasets import Planetoid
-import torch_geometric.transforms as T
-from torch_geometric.nn import GCNConv, GAE, VGAE
-from torch_geometric.utils import train_test_split_edges
-from torch.utils.data import IterableDataset
-from torch_geometric.data import DataLoader, Data
-from controller_env.envs.graph_env import generateGraph
-from torch_geometric.utils.convert import from_networkx, from_scipy_sparse_matrix
+# coding=utf-8
+import numpy as np
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+import tensorflow as tf
+import tf_geometric as tfg
+from tensorflow import keras
 import networkx as nx
+import pickle
+from stable_baselines.deepq.policies import DQNPolicy
+import controller_env
+from controller_env.envs.graph_env import generateGraph, generateAlternateGraph, generateClusters, ControllerEnv
+import random
+import matplotlib.pyplot as plt
+import math
+import traceback
+import gym
+from stable_baselines import PPO1, DQN
+from stable_baselines.deepq.replay_buffer import ReplayBuffer  # PrioritizedReplayBuffer vs ReplayBuffer, what is the difference?
+import shutil
+import sys
+import signal
 
-torch.manual_seed(12345)
+#graph = tfg.Graph(
+#    x=np.random.randn(5, 20),  # 5 nodes, 20 features,
+#    edge_index=[[0, 0, 1, 3],
+#                [1, 2, 2, 1]]  # 4 undirected edges
+#)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--model', type=str, default='GAE')
-args = parser.parse_args()
-assert args.model in ['GAE', 'VGAE']
-kwargs = {'GAE': GAE, 'VGAE': VGAE}
+#print("Graph Desc: \n", graph)
 
+#graph.convert_edge_to_directed()  # pre-process edges
+#print("Processed Graph Desc: \n", graph)
+#print("Processed Edge Index:\n", graph.edge_index)
 
-class Encoder(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(Encoder, self).__init__()
-        self.conv1 = GCNConv(in_channels, 2 * out_channels, cached=True)
-        if args.model in ['GAE']:
-            self.conv2 = GCNConv(2 * out_channels, out_channels, cached=True)
-        elif args.model in ['VGAE']:
-            self.conv_mu = GCNConv(2 * out_channels, out_channels, cached=True)
-            self.conv_logvar = GCNConv(2 * out_channels, out_channels,
-                                       cached=True)
+## Multi-head Graph Attention Network (GAT)
+#gat_layer = tfg.layers.GAT(units=4, num_heads=4, activation=tf.nn.relu)
+#output = gat_layer([graph.x, graph.edge_index])
+#print("Output of GAT: \n", output)
 
-    def forward(self, x, edge_index):
-        x = F.relu(self.conv1(x, edge_index))
-        if args.model in ['GAE']:
-            return self.conv2(x, edge_index)
-        elif args.model in ['VGAE']:
-            return self.conv_mu(x, edge_index), self.conv_logvar(x, edge_index)
+clusters = pickle.load(open('clusters.pickle', 'rb'))
+pos = pickle.load(open('position.pickle', 'rb'))
+graph = nx.read_gpickle('graph.gpickle')
 
-class NetworkIterable(IterableDataset):
-	def __iter__(self):
-		graph, cluster, pos = generateGraph(3, 15)
-		print(graph.edges)
-		print(graph.edges.data('weight'))
-		#edges = nx.to_scipy_sparse_matrix(graph)
-		#pytorch_edges = from_scipy_sparse_matrix(edges)
-		data = from_networkx(graph)
-		print(data)
-		#data = Data(x=pytorch_graph, edge_index=pytorch_edges, y=pytorch_graph)
-		data.train_mask = data.val_mask = data.test_mask = data.y = None
-		data.weight = data.weight.long()
-		data = train_test_split_edges(data)
-		yield data
+tf.enable_eager_execution()
 
-channels = 1  # Number of hidden channels
-num_features = 1
-dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = kwargs[args.model](Encoder(num_features, channels)).to(dev)
-graph_dataset = NetworkIterable()  # Generates graphs for the dataloader "on the fly"
-loader = DataLoader(graph_dataset, batch_size=4)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+class GATPolicy(DQNPolicy):
+	def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, graph):
+		super(GATPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch)
+		cluster_info = nx.get_node_attributes(graph, 'cluster')
+		node_attr = np.zeros(shape=(len(cluster_info),2), dtype=np.float32)
+		for key, value in cluster_info.items():  # Try having all 0s for not-controller
+			node_attr[key][1] = value
 
+		edge_weights = nx.get_edge_attributes(graph, 'weight')
+		edge_attr = np.empty(shape=(len(edge_weights),), dtype=np.float32)
+		edges = np.array(graph.edges).T
+		i = 0
+		for key, value in edge_weights.items():
+			assert (edges[0][i], edges[1][i]) == key
+			edge_attr[i] = value
+			i += 1
 
-def train():
-	for batch_data in loader:
-		model.train()
-		optimizer.zero_grad()
-		print(batch_data)
-		x, train_pos_edge_index = batch_data.batch.to(dev), batch_data.train_pos_edge_index.to(dev)
-		print(x)
-		print(train_pos_edge_index)
-		z = model.encode(x, train_pos_edge_index)
-		loss = model.recon_loss(z, train_pos_edge_index)
-		if args.model in ['VGAE']:
-			loss = loss + (1 / data.num_nodes) * model.kl_loss()
-		loss.backward()
-		optimizer.step()
+		edges, [edge_attr] = tfg.utils.graph_utils.convert_edge_to_directed(edges, [edge_attr])
+		self.graph = tfg.Graph(
+			x=node_attr,
+			edge_index=edges,
+			edge_weight=edge_attr
+		)
+		print([self.graph.x, self.graph.edge_index, self.graph.edge_weight])
+		print(self.graph.x.shape)
+		print(self.graph.edge_index.shape)
+		print(self.graph.edge_weight.shape)
+		print(self.graph)
+		#self.graph.x = tf.placeholder(tf.int16, shape=(len(cluster_info),))
+		#print(self.graph.x)
+		self.graph.convert_data_to_tensor()
+		gcn0 = tfg.layers.GCN(16, activation=tf.nn.relu)
+		#gcn1 = tfg.layers.GCN(128)
 
+		h = gcn0([self.graph.x, self.graph.edge_index, self.graph.edge_weight])
+		h = gcn1([h, self.graph.edge_index, self.graph.edge_weight], cache=self.graph.cache)
+		print(h)
+		self.q_values = action_out
+		self._setup_init()
 
-def test(pos_edge_index, neg_edge_index):
-    model.eval()
-    with torch.no_grad():
-        z = model.encode(x, train_pos_edge_index)
-    return model.test(z, pos_edge_index, neg_edge_index)
+		def step(self, obs, state=None, mask=None, deterministic=True):
+			q_values, actions_proba = self.sess.run([self.q_values, self.policy_proba], {self.obs_ph: obs})
+			if deterministic:
+				actions = np.argmax(q_values, axis=1)
+			else:
+				# Unefficient sampling
+				# TODO: replace the loop
+				# maybe with Gumbel-max trick ? (http://amid.fish/humble-gumbel)
+				actions = np.zeros((len(obs),), dtype=np.int64)
+				for action_idx in range(len(obs)):
+					actions[action_idx] = np.random.choice(self.n_actions, p=actions_proba[action_idx])
 
+			return actions, q_values, None
 
-for epoch in range(1, 401):
-    train()
-    auc, ap = test(data.test_pos_edge_index, data.test_neg_edge_index)
-    print('Epoch: {:03d}, AUC: {:.4f}, AP: {:.4f}'.format(epoch, auc, ap))
+	def proba_step(self, obs, state=None, mask=None):
+		return self.sess.run(self.policy_proba, {self.obs_ph: obs})
+
+env = gym.make('Controller-Cluster-v0', graph=graph, clusters=clusters, pos={})
+policy_params={'graph': graph}
+model = DQN(GATPolicy, env, policy_kwargs=policy_params)
+model.learn(1000)

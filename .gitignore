@@ -489,3 +489,8 @@ MigrationBackup/
 /train_log_env_compare
 *.graphml
 *.txt
+/MCTSGraphs
+/train_log_optuna
+/MCTS Graphs.zip
+/heuristic_graph.py
+/data
