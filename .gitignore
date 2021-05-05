@@ -2,6 +2,9 @@
 # Created by https://www.gitignore.io/api/python,visualstudio
 # Edit at https://www.gitignore.io/?templates=python,visualstudio
 
+100Graphs/*
+100Graphs*
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -494,3 +497,4 @@ MigrationBackup/
 /MCTS Graphs.zip
 /heuristic_graph.py
 /data
+/100GraphResults.csv

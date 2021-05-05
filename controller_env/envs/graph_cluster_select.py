@@ -19,6 +19,8 @@ class ControllerClusterSelect(ControllerEnv):
 	def __init__(self, graph, clusters, pos=None):
 		"""Initilizes environment and assigns random nodes to be controllers"""
 		super().__init__(graph, clusters, pos, check_controller_num=False)
+		self.average_graph = self.graph.copy()
+		self.num_resets = 0
 		self.controllers = []
 		self.best_controllers = []
 		self.best_reward = 100000
@@ -26,6 +28,8 @@ class ControllerClusterSelect(ControllerEnv):
 
 		self.num_clusters = len(clusters)
 		print(self.num_clusters)
+
+		self.original_graph = graph.copy()
 
 		# Created to speed up getting cluster info since graph is static
 		cluster_info = nx.get_node_attributes(self.graph, 'cluster')
@@ -80,7 +84,7 @@ class ControllerClusterSelect(ControllerEnv):
 		#	rew = 0
 		return (obs, -rew, done, i)
 
-	def reset(self, adjust=False):
+	def reset(self, adjust=True, full=False):
 		"""Resets environment"""
 		self.controllers = []
 		self.state = np.zeros(shape=len(self.graph.nodes))
@@ -88,25 +92,33 @@ class ControllerClusterSelect(ControllerEnv):
 		self.cluster_index = 0
 		super().reset()
 		if adjust:
-			# Shift the optimal by some amount by doing a random increase to a path between 2 random nodes
-			start_cluster = np.random.randint(0, self.num_clusters)
-			end_cluster = np.random.randint(0, self.num_clusters)
-			while end_cluster == start_cluster:
-				end_cluster = np.random.randint(0, self.num_clusters)
-			start_controller = np.random.choice(self.clusters[start_cluster])
-			end_controller = np.random.choice(self.clusters[end_cluster])
-			#while end_controller == start_controller:
-			#	end_controller = np.random.randint(0, len(self.graph.nodes))
-			path = nx.shortest_path(self.graph, source=start_controller, target=end_controller, weight='weight')
-			prior_node = start_controller
-			random_change = np.random.randint(-5, 6)
-			for i in range(1, len(path)):
-				#print(i, self.graph[prior_node][path[i]]['weight'])
-				self.graph[prior_node][path[i]]['weight'] += random_change
-				#print(i, self.graph[prior_node][path[i]]['weight'])
-				if self.graph.get_edge_data(prior_node, path[i])['weight'] < 0:
-					self.graph[prior_node][path[i]]['weight'] = 0
-				prior_node = path[i]
+			## Shift the optimal by some amount by doing a random increase to a path between 2 random nodes
+			#start_cluster = np.random.randint(0, self.num_clusters)
+			#end_cluster = np.random.randint(0, self.num_clusters)
+			#while end_cluster == start_cluster:
+			#	end_cluster = np.random.randint(0, self.num_clusters)
+			#start_controller = np.random.choice(self.clusters[start_cluster])
+			#end_controller = np.random.choice(self.clusters[end_cluster])
+			##while end_controller == start_controller:
+			##	end_controller = np.random.randint(0, len(self.graph.nodes))
+			#path = nx.shortest_path(self.graph, source=start_controller, target=end_controller, weight='weight')
+			#prior_node = start_controller
+			#random_change = np.random.randint(-5, 6)
+			#for i in range(1, len(path)):
+			#	#print(i, self.graph[prior_node][path[i]]['weight'])
+			#	self.graph[prior_node][path[i]]['weight'] += random_change
+			#	#print(i, self.graph[prior_node][path[i]]['weight'])
+			#	if self.graph.get_edge_data(prior_node, path[i])['weight'] < 0:
+			#		self.graph[prior_node][path[i]]['weight'] = 0
+			#	prior_node = path[i]
+			# Modify every edge to be chosen from random distribution around other edge
+			for u, v, dist in self.original_graph.edges.data('weight'):
+				self.graph[u][v]['weight'] = np.random.normal(dist, 10) # (0.5 + np.random.beta(0.5, 0.5)) * dist
+				self.average_graph[u][v]['weight'] = ((self.average_graph[u][v]['weight'] * self.num_resets) + self.graph[u][v]['weight']) / (self.num_resets + 1)
+			self.num_resets += 1
+		else:
+			if full:
+				self.graph = self.original_graph.copy()
 		return self.state.copy()
 
 	def optimal_neighbors(self, graph, controllers : list) -> (list, int):
@@ -142,6 +154,43 @@ class ControllerClusterSelect(ControllerEnv):
 				min_dist = dist
 				min_combination = combination
 		return (min_combination, min_dist)
+
+	def compute_greedy_heuristic(self):
+		"""
+		Computes WMSCP Greedy Heuristic. self.graph is the NetworkX graph. self.clusters is a list of lists of node incides 
+		where each list corresponds to the list of nodes in each cluster (so [[0,1,2,3],[4,5,6,7]] would be two clusters with 0-3 
+		in one cluster and 4-7 in other).
+		"""
+		controller_set = []  # Stores controller indices
+		distances = nx.floyd_warshall(self.graph, 'weight')  # Stores distances between every node
+		weights_index = 0  # Converts index of minimum weight to actual node index (only works because clusters are in-order and sorted
+		for i in range(len(self.clusters)):
+			# Go through each node in cluster and compute weights
+			weights = []
+			for node in self.clusters[i]:
+				# Go through every cluster and find shortest distance, shortest distance to controller
+				weight = 0  # Stores weight of this node
+				for j in range(len(self.clusters)):
+					if i == j:  # Matching cluster, ignore
+						continue
+					cluster_distance = 1e6
+					controller_distance = 0
+					for cluster_node in self.clusters[j]:
+						# Go through every node in other clusters and compute distance to find shortest node per cluster
+						cluster_distance = min(cluster_distance, distances[node][cluster_node])
+						if cluster_node in controller_set:
+							# If node is a controller, add its distance a "second" time to correspond 
+							# to second sigma-sum of weight calculation
+							assert controller_distance == 0, print(cluster_node, controller_set)
+							controller_distance = distances[node][cluster_node]
+					assert cluster_distance != 1e6, "Cluster distance was too low, it was not modified"
+					weight += cluster_distance + controller_distance  # Add to node weight
+					weight /= len(self.clusters[i]) + 1  # Divide by nodes covered (the length of cluster upcoming controller is in)
+				weights.append(weight)
+			controller_set.append(weights.index(min(weights)) + weights_index)  # Add node index to controller list
+			weights_index += len(self.clusters[i])
+		return controller_set, super().step(controller_set)  # Return controller list and corresponding cost (minimum distance between all controllers)
+
 
 	def rewardStep(self, controllers):
 		# This is just there so SelectModified can call on the base class

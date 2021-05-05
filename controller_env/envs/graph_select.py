@@ -31,6 +31,7 @@ class ControllerSlowSelect(ControllerEnv):
 
 		# Created to speed up creating observation
 		self.state = np.zeros(shape=len(self.graph.nodes))
+		self.original_graph = graph.copy()  # Keep original graph for reset
 
 	def step(self, action):
 		"""
