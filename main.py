@@ -268,7 +268,7 @@ if __name__ == "__main__":
 		print(clusters)
 	else:
 		print("Generating graph")
-		graph, clusters, pos = generateAlternateGraph(10, 500, 50, 150)
+		graph, clusters, pos = generateAlternateGraph(5, 500, 50, 150, draw=False)
 		nx.write_gpickle(graph, 'graph.gpickle')
 		pickle.dump(clusters, open('clusters.pickle', 'wb'))
 		pickle.dump(pos, open('position.pickle', 'wb'))

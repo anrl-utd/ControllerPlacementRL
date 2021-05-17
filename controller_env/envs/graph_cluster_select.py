@@ -113,7 +113,7 @@ class ControllerClusterSelect(ControllerEnv):
 			#	prior_node = path[i]
 			# Modify every edge to be chosen from random distribution around other edge
 			for u, v, dist in self.original_graph.edges.data('weight'):
-				self.graph[u][v]['weight'] = np.random.normal(dist, 10) # (0.5 + np.random.beta(0.5, 0.5)) * dist
+				self.graph[u][v]['weight'] = np.random.normal(dist, 5) # (0.5 + np.random.beta(0.5, 0.5)) * dist
 				self.average_graph[u][v]['weight'] = ((self.average_graph[u][v]['weight'] * self.num_resets) + self.graph[u][v]['weight']) / (self.num_resets + 1)
 			self.num_resets += 1
 		else:
